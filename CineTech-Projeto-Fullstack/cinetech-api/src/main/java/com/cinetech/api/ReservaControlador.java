@@ -7,7 +7,7 @@ import com.cinetech.dominio.modelo.Reserva;
 import com.cinetech.excecao.AssentosEsgotadosExcecao;
 import com.cinetech.servico.ReservaServico;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.validation.Valid; // IMPORTAÇÃO ADICIONADA
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
@@ -22,13 +22,9 @@ public class ReservaControlador {
         this.reservaServico = reservaServico;
     }
 
-    /**
-     * NOVO ENDPOINT
-     * Endpoint: POST /api/reservas
-     * Cria uma nova reserva (carrinho).
-     */
     @PostMapping
-    public ResponseEntity<?> criarNovaReserva(@Valid @RequestBody @NonNull CriarReservaRequest request) { // @Valid ADICIONADO
+    @SuppressWarnings("null") // CORREÇÃO: Suprime o aviso de conversão Long -> @NonNull Long
+    public ResponseEntity<?> criarNovaReserva(@Valid @RequestBody @NonNull CriarReservaRequest request) {
         try {
             Reserva novaReserva = reservaServico.criarReserva(request.getUsuarioId());
             return ResponseEntity.status(201).body(novaReserva);
@@ -37,13 +33,9 @@ public class ReservaControlador {
         }
     }
 
-    /**
-     * NOVO ENDPOINT
-     * Endpoint: PUT /api/reservas/{id}/item
-     * Adiciona/atualiza ingressos na reserva (RF-004).
-     */
     @PutMapping("/{id}/item")
-    public ResponseEntity<?> adicionarItem(@PathVariable @NonNull Long id, @Valid @RequestBody @NonNull AdicionarItemRequest request) { // @Valid ADICIONADO
+    @SuppressWarnings("null")
+    public ResponseEntity<?> adicionarItem(@PathVariable @NonNull Long id, @Valid @RequestBody @NonNull AdicionarItemRequest request) {
         try {
             ItemReserva item = reservaServico.adicionarItemAReserva(
                 id, 
@@ -56,20 +48,14 @@ public class ReservaControlador {
         }
     }
 
-    /**
-     * (Código existente)
-     * Endpoint: POST /api/reservas/{id}/confirmar
-     * Endpoint crítico (RF-005).
-     */
     @PostMapping("/{id}/confirmar")
+    @SuppressWarnings("null")
     public ResponseEntity<?> confirmarReserva(@PathVariable @NonNull Long id) {
         try {
             Reserva reservaConfirmada = reservaServico.confirmarReserva(id);
-            // Cenário Sucesso (RF-008)
             return ResponseEntity.ok(reservaConfirmada); 
             
         } catch (AssentosEsgotadosExcecao e) {
-            // Cenário Falha (RF-007)
             return ResponseEntity.badRequest().body(e.getMessage()); 
             
         } catch (Exception e) {

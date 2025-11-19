@@ -23,7 +23,6 @@ public class ReservaServico {
     private final UsuarioRepositorio usuarioRepositorio;
     private final ItemReservaRepositorio itemReservaRepositorio;
 
-    // Construtor atualizado com as novas dependências
     public ReservaServico(ReservaRepositorio reservaRepositorio,
                           SessaoRepositorio sessaoRepositorio,
                           UsuarioRepositorio usuarioRepositorio,
@@ -34,10 +33,6 @@ public class ReservaServico {
         this.itemReservaRepositorio = itemReservaRepositorio;
     }
 
-    /**
-     * NOVO MÉTODO
-     * Cria uma nova reserva (carrinho) em estado ABERTO.
-     */
     @Transactional
     public Reserva criarReserva(@NonNull Long usuarioId) {
         Usuario usuario = usuarioRepositorio.findById(usuarioId)
@@ -51,12 +46,8 @@ public class ReservaServico {
         return reservaRepositorio.save(novaReserva);
     }
 
-    /**
-     * NOVO MÉTODO
-     * Adiciona um item (RF-004) a uma reserva existente.
-     * Refatora a lógica do 'adicionarItem' do 'Pedido.java' [cite: 7] original.
-     */
     @Transactional
+    @SuppressWarnings("null") // CORREÇÃO: Suprime alertas de nulidade na lógica de Optional/Entidades
     public ItemReserva adicionarItemAReserva(@NonNull Long reservaId, @NonNull Long sessaoId, int quantidade) {
         if (quantidade <= 0) {
             throw new IllegalArgumentException("Quantidade deve ser maior que zero");
@@ -71,7 +62,6 @@ public class ReservaServico {
             throw new IllegalStateException("Não é possível adicionar itens a uma reserva que não esteja ABERTA.");
         }
         
-        // Verifica se o item já existe (lógica do Pedido.java [cite: 7] original)
         Optional<ItemReserva> itemExistenteOpt = itemReservaRepositorio.findByReservaIdAndSessaoId(reservaId, sessaoId);
         
         ItemReserva itemParaSalvar;
@@ -88,13 +78,7 @@ public class ReservaServico {
         return itemReservaRepositorio.save(itemParaSalvar);
     }
 
-
-    /**
-     * (Código existente)
-     * Lógica de negócio principal (RF-006, RF-007, RF-008) [cite: 2].
-     * Refatorada do 'processarPedido()' [cite: 6] original.
-     */
-    @Transactional
+    @Transactional(noRollbackFor = AssentosEsgotadosExcecao.class)
     public Reserva confirmarReserva(@NonNull Long reservaId) {
         
         Reserva reserva = reservaRepositorio.findById(reservaId)
@@ -102,14 +86,10 @@ public class ReservaServico {
         
         List<ItemReserva> itens = reserva.getItens();
         
-        // Validação (RF-006)
         for (ItemReserva item : itens) {
             Sessao sessao = item.getSessao();
             
-            // ***** CORREÇÃO AQUI *****
-            // O nome do método estava com acento (getAssentosDisponíveis)
             if (sessao.getAssentosDisponiveis() < item.getQuantidade()) {
-                // Falha (RF-007)
                 reserva.setStatus(StatusReserva.CANCELADO);
                 reservaRepositorio.save(reserva);
                 
@@ -119,7 +99,6 @@ public class ReservaServico {
             }
         }
         
-        // Sucesso (RF-008)
         double valorTotalCalculado = 0.0;
         for (ItemReserva item : itens) {
             Sessao sessao = item.getSessao();
