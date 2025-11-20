@@ -33,7 +33,7 @@ INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
     'Interestelar', 
     'Um grupo de astronautas recebe a missão de verificar possíveis planetas para receberem a população mundial.', 
     169,
-    'https://image.tmdb.org/t/p/w780/gEU2QniL6E8AHtMY4kOD87CFEcc.jpg'
+    'https://images.justwatch.com/poster/312160153/s718/interestelar.jpg'
 );
 
 -- Novos Filmes
@@ -41,14 +41,14 @@ INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
     'Batman', 
     'Bruce Wayne atua como o vigilante de Gotham City há dois anos e isso o leva às sombras da cidade.', 
     176,
-    'https://image.tmdb.org/t/p/w780/wd7b4Ni9IuMMt7NCXYDceKC3dB.jpg'
+    'https://br.web.img3.acsta.net/pictures/22/03/02/19/26/3666027.jpg'
 );
 
 INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
     'Avatar: O Caminho da Água', 
     'Jake Sully vive com sua nova família no planeta Pandora. Uma ameaça familiar retorna para acabar com o que foi iniciado anteriormente.', 
     192,
-    'https://image.tmdb.org/t/p/w780/mbYQLLluS651W89jO7MOZcLSCuw.jpg'
+    'https://lumiere-a.akamaihd.net/v1/images/eb4bc0a61fd20b59403712b01a45344d_2764x4096_040bd467.jpeg?region=0,0,2764,4096'
 );
 
 INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
@@ -69,7 +69,7 @@ INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
     'Matrix', 
     'Um hacker aprende com rebeldes misteriosos sobre a verdadeira natureza de sua realidade e seu papel na guerra contra seus controladores.', 
     136,
-    'https://image.tmdb.org/t/p/w780/lZpWprJgY75k5iwW7Wl12U3FFg.jpg'
+    'https://m.media-amazon.com/images/M/MV5BZGM1NDM3MTAtMmI0ZC00ZDAwLWEwY2EtNDdhYjZmMjJkNzM0XkEyXkFqcGc@._V1_.jpg'
 );
 
 INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
@@ -83,23 +83,23 @@ INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
     'Top Gun: Maverick', 
     'Depois de mais de 30 anos de serviço como um dos principais aviadores da Marinha, Pete "Maverick" Mitchell está de volta.', 
     131,
-    'https://image.tmdb.org/t/p/w780/i0z8g2VRZP3dhVvvSMilbOZMKqR.jpg'
+    'https://upload.wikimedia.org/wikipedia/pt/d/d2/Top_Gun_Maverick.jpg'
 );
 
--- 4. Cadastrar Sessões (Atualizado com mais horários e filmes)
+-- 4. Cadastrar Sessões (MODIFICADO: Todos os assentos disponíveis redefinidos para 80)
 -- A Origem (ID 1)
 INSERT INTO TB_SESSAO (data_hora, valor_ingresso, assentos_disponiveis, filme_id, sala_id) VALUES
 ('2025-11-12 18:00:00', 35.50, 80, 1, 1),
-('2025-11-12 21:00:00', 50.00, 20, 1, 2); 
+('2025-11-12 21:00:00', 50.00, 80, 1, 2); 
 
 -- Duna (ID 2)
 INSERT INTO TB_SESSAO (data_hora, valor_ingresso, assentos_disponiveis, filme_id, sala_id) VALUES
-('2025-11-12 19:00:00', 35.50, 60, 2, 1),
-('2025-11-12 20:30:00', 28.00, 40, 2, 3); 
+('2025-11-12 19:00:00', 35.50, 80, 2, 1),
+('2025-11-12 20:30:00', 28.00, 80, 2, 3); 
 
 -- Interestelar (ID 3)
 INSERT INTO TB_SESSAO (data_hora, valor_ingresso, assentos_disponiveis, filme_id, sala_id) VALUES
-('2025-11-12 20:00:00', 48.00, 10, 3, 2); 
+('2025-11-12 20:00:00', 48.00, 80, 3, 2); 
 
 -- Batman (ID 4)
 INSERT INTO TB_SESSAO (data_hora, valor_ingresso, assentos_disponiveis, filme_id, sala_id) VALUES
@@ -107,11 +107,11 @@ INSERT INTO TB_SESSAO (data_hora, valor_ingresso, assentos_disponiveis, filme_id
 
 -- Avatar (ID 5)
 INSERT INTO TB_SESSAO (data_hora, valor_ingresso, assentos_disponiveis, filme_id, sala_id) VALUES
-('2025-11-12 16:00:00', 55.00, 75, 5, 1);
+('2025-11-12 16:00:00', 55.00, 80, 5, 1);
 
 -- Oppenheimer (ID 6)
 INSERT INTO TB_SESSAO (data_hora, valor_ingresso, assentos_disponiveis, filme_id, sala_id) VALUES
-('2025-11-12 19:30:00', 45.00, 5, 6, 3);
+('2025-11-12 19:30:00', 45.00, 80, 6, 3);
 
 -- Homem Aranha (ID 7)
 INSERT INTO TB_SESSAO (data_hora, valor_ingresso, assentos_disponiveis, filme_id, sala_id) VALUES
@@ -123,8 +123,8 @@ INSERT INTO TB_SESSAO (data_hora, valor_ingresso, assentos_disponiveis, filme_id
 
 -- Vingadores (ID 9)
 INSERT INTO TB_SESSAO (data_hora, valor_ingresso, assentos_disponiveis, filme_id, sala_id) VALUES
-('2025-11-12 18:30:00', 40.00, 0, 9, 1); -- Sessão esgotada
+('2025-11-12 18:30:00', 40.00, 80, 9, 1);
 
 -- Top Gun (ID 10)
 INSERT INTO TB_SESSAO (data_hora, valor_ingresso, assentos_disponiveis, filme_id, sala_id) VALUES
-('2025-11-12 15:00:00', 35.00, 42, 10, 2);
+('2025-11-12 15:00:00', 35.00, 80, 10, 2);
