@@ -4,13 +4,17 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
-import Home from './pages/Home';
-import MovieDetail from './pages/MovieDetail';
-import Cart from './pages/Cart';
-import Profile from './pages/Profile';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import AdminDashboard from './pages/AdminDashboard';
+
+// Importação consolidada através do index.ts
+import { 
+  Home, 
+  MovieDetail, 
+  Cart, 
+  Profile, 
+  Login, 
+  Register, 
+  AdminDashboard 
+} from './pages';
 
 const PageWrapper = ({ children }: { children: React.ReactNode }) => (
   <motion.div

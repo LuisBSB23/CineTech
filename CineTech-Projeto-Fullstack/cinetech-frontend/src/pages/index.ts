@@ -1,35 +1,7 @@
-export interface Filme {
-  id: number;
-  titulo: string;
-  sinopse: string;
-  duracaoMinutos: number;
-}
-
-export interface Sala {
-  id: number;
-  nome: string;
-  capacidadeTotal: number;
-}
-
-export interface Sessao {
-  id: number;
-  dataHora: string;
-  valorIngresso: number;
-  assentosDisponiveis: number;
-  filme: Filme;
-  sala: Sala;
-}
-
-export interface ItemReserva {
-  id: number;
-  quantidade: number;
-  sessao: Sessao;
-}
-
-export interface Reserva {
-  id: number;
-  dataHoraCriacao: string;
-  status: 'ABERTO' | 'CONFIRMADO' | 'CANCELADO';
-  valorTotal: number;
-  itens: ItemReserva[];
-}
+export { default as Home } from './Home';
+export { default as Login } from './login';
+export { default as Register } from './Register';
+export { default as MovieDetail } from './MovieDetail';
+export { default as Cart } from './Cart';
+export { default as Profile } from './Profile';
+export { default as AdminDashboard } from './AdminDashboard';
