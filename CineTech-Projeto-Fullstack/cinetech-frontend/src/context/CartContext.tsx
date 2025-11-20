@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
+import { toast } from 'react-hot-toast'; // Nova dependência
 import { type Reserva, type Sessao, type ItemReserva } from '../types';
 import { criarReserva, adicionarItem, confirmarReserva } from '../api';
 
@@ -25,6 +26,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const addToCart = async (sessao: Sessao, quantidade: number) => {
     setLoading(true);
     setError(null);
+    const toastId = toast.loading('Reservando assentos...'); // Feedback inicial
+
     try {
       let currentReserva = reserva;
       
@@ -38,7 +41,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setReserva((prev: Reserva | null) => {
         if (!prev) return null;
         
-        // CORREÇÃO: Proteção contra 'itens' nulo (prev.itens || [])
         const itensSeguros = prev.itens || [];
         const existingIdx = itensSeguros.findIndex((i: ItemReserva) => i.sessao.id === sessao.id);
         let newItens = [...itensSeguros];
@@ -53,8 +55,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         return { ...prev, itens: newItens, valorTotal: novoTotal };
       });
 
+      toast.success('Adicionado ao carrinho!', { id: toastId }); // Sucesso
+
     } catch (err: any) {
-      setError(err.response?.data || err.message || "Erro ao adicionar item");
+      const msg = err.response?.data || err.message || "Erro ao adicionar item";
+      setError(msg);
+      toast.error(msg, { id: toastId }); // Erro
     } finally {
       setLoading(false);
     }
@@ -63,11 +69,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const checkout = async () => {
     if (!reserva) return;
     setLoading(true);
+    const toastId = toast.loading('Processando pagamento...');
+
     try {
       await confirmarReserva(reserva.id);
+      toast.success('Compra realizada com sucesso!', { id: toastId });
     } catch (err: any) {
       const msg = typeof err.response?.data === 'string' ? err.response.data : "Erro ao finalizar compra.";
       setError(msg);
+      toast.error(msg, { id: toastId });
       throw err;
     } finally {
       setLoading(false);
@@ -79,7 +89,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
   };
 
-  // CORREÇÃO: Proteção contra 'itens' nulo no contador (reserva?.itens?.reduce)
   const itemCount = reserva?.itens?.reduce((acc: number, i: ItemReserva) => acc + i.quantidade, 0) || 0;
 
   return (
