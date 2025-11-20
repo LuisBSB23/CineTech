@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { type Reserva, type Sessao, type ItemReserva } from '../types';
-import { criarReserva, adicionarItem, confirmarReserva } from '../api/index'; // Import explícito
+import { criarReserva, adicionarItem, confirmarReserva } from '../api/index';
+import { useAuth } from './AuthContext';
 
 interface CartContextType {
   reserva: Reserva | null;
@@ -17,13 +18,24 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth(); // Usa o usuário do contexto de autenticação
   const [reserva, setReserva] = useState<Reserva | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const USUARIO_ID = 1; 
+  // Limpa o carrinho se o usuário fizer logout
+  useEffect(() => {
+    if (!user) {
+        setReserva(null);
+    }
+  }, [user]);
 
   const addToCart = async (sessao: Sessao, quantidade: number, selectedSeats: string[]) => {
+    if (!user) {
+        toast.error("Você precisa fazer login para reservar.");
+        return;
+    }
+
     setLoading(true);
     setError(null);
     const toastId = toast.loading('Reservando assentos...');
@@ -32,11 +44,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       let currentReserva = reserva;
       
       if (!currentReserva) {
-        currentReserva = await criarReserva(USUARIO_ID);
+        currentReserva = await criarReserva(user.id);
         setReserva(currentReserva);
       }
 
-      // Envia os assentos para o backend!
       const novoItem = await adicionarItem(currentReserva.id, sessao.id, quantidade, selectedSeats);
 
       setReserva((prev: Reserva | null) => {

@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Calendar, Clock, ChevronLeft, Info, MapPin, Ban } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-// Corrigindo os caminhos de importação
 import { getFilmes, getSessoes } from "../api/index";
 import type { Filme, Sessao } from "../types/index";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext"; // Import Auth
 import { Card, Button, MovieCardSkeleton } from "../components/UiComponents";
 import { SeatMap } from "../components/SeatMap";
+import { toast } from "react-hot-toast";
 
-// Lista fixa de salas conforme o banco de dados (data.sql)
 const ALL_ROOMS = [
   { id: 1, nome: "Sala 1 - IMAX" },
   { id: 2, nome: "Sala 2 - VIP" },
@@ -19,15 +19,22 @@ const ALL_ROOMS = [
 export default function MovieDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart, reserva } = useCart(); // Pegamos a reserva para verificar itens no carrinho
+  const { addToCart, reserva } = useCart();
+  const { user } = useAuth(); // Hook de Auth
   
   const [filme, setFilme] = useState<Filme | null>(null);
   const [sessoes, setSessoes] = useState<Sessao[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSessaoId, setSelectedSessaoId] = useState<number | null>(null);
-  
-  // Agora armazenamos os IDs dos assentos (strings)
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+
+  // Proteção: Redireciona se não logado ao tentar montar a tela (Opção B: Permitir ver mas bloquear ações)
+  // Neste caso, seguindo o prompt "ver detalhes pedirá login", vamos redirecionar logo no início:
+  useEffect(() => {
+    if (!user) {
+        navigate("/login");
+    }
+  }, [user, navigate]);
 
   useEffect(() => {
     if (!id) return;
@@ -36,10 +43,8 @@ export default function MovieDetail() {
         const [filmesRes, sessoesRes] = await Promise.all([getFilmes(), getSessoes(Number(id))]);
         setFilme(filmesRes.find(f => f.id === Number(id)) || null);
         setSessoes(sessoesRes);
-        
-        // Seleciona automaticamente a primeira sessão disponível se houver
         if (sessoesRes.length > 0) {
-            setSelectedSessaoId(null); // Deixa o utilizador escolher explicitamente
+            setSelectedSessaoId(null);
         }
       } finally {
         setLoading(false);
@@ -49,20 +54,26 @@ export default function MovieDetail() {
   }, [id]);
 
   const handleAddToCart = async () => {
+    // Verificação redundante de segurança
+    if (!user) {
+        navigate("/login");
+        return;
+    }
+
     const sessao = sessoes.find(s => s.id === selectedSessaoId);
     if (sessao && selectedSeats.length > 0) {
       await addToCart(sessao, selectedSeats.length, selectedSeats);
-      setSelectedSeats([]); // Reseta seleção local
+      setSelectedSeats([]);
     }
   };
 
-  // Recupera assentos já adicionados ao carrinho para a sessão atual (bloqueio visual)
   const getBlockedSeatsForSession = (sessaoId: number): string[] => {
     if (!reserva || !reserva.itens) return [];
     const item = reserva.itens.find(i => i.sessao.id === sessaoId);
     return item?.selectedSeats || [];
   };
 
+  if (!user) return null; // Evita flash de conteúdo antes do redirect
   if (loading) return <div className="max-w-4xl mx-auto p-8"><MovieCardSkeleton /></div>;
   if (!filme) return <div className="p-20 text-center text-white">Filme não encontrado.</div>;
 
@@ -78,16 +89,11 @@ export default function MovieDetail() {
       </button>
 
       <div className="grid md:grid-cols-3 gap-8 px-4">
-        {/* Coluna Esquerda: Info do Filme */}
         <div className="md:col-span-1 space-y-6">
           <div className="rounded-2xl overflow-hidden shadow-2xl shadow-cyan-900/10 border border-slate-800 bg-slate-800">
              <div className="aspect-[2/3] flex items-center justify-center relative">
                 {filme.imagemUrl ? (
-                  <img 
-                    src={filme.imagemUrl} 
-                    alt={filme.titulo} 
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={filme.imagemUrl} alt={filme.titulo} className="w-full h-full object-cover"/>
                 ) : (
                   <Info className="text-slate-600" size={64} />
                 )}
@@ -99,23 +105,19 @@ export default function MovieDetail() {
               <span className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded border border-slate-800">
                 <Clock size={14} className="text-cyan-500"/> {filme.duracaoMinutos} min
               </span>
-              <span className="bg-slate-900 px-2 py-1 rounded border border-slate-800">Sci-Fi</span>
             </div>
             <p className="text-slate-400 leading-relaxed text-sm">{filme.sinopse}</p>
           </div>
         </div>
 
-        {/* Coluna Direita: Seleção de Sessão e Assentos */}
         <div className="md:col-span-2">
           <Card className="p-6 bg-slate-900/50 backdrop-blur-md border-slate-800">
             <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
               <Calendar className="text-cyan-500"/> Selecione a Sessão
             </h2>
 
-            {/* Grid de Salas (Modificação 1) */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
               {ALL_ROOMS.map(room => {
-                 // Verifica se existe sessão para este filme nesta sala
                  const sessionInRoom = sessoes.find(s => s.sala.id === room.id);
                  const isSelected = sessionInRoom && sessionInRoom.id === selectedSessaoId;
                  const isDisabled = !sessionInRoom;
@@ -159,7 +161,6 @@ export default function MovieDetail() {
               })}
             </div>
 
-            {/* Mapa de Assentos */}
             <AnimatePresence mode="wait">
               {activeSessao && (
                 <motion.div
@@ -171,8 +172,6 @@ export default function MovieDetail() {
                 >
                   <SeatMap 
                     sessaoId={activeSessao.id} 
-                    occupiedCount={activeSessao.sala.capacidadeTotal - activeSessao.assentosDisponiveis} 
-                    // Modificação 3: Passamos os assentos que já estão no carrinho para bloqueá-los
                     blockedSeats={getBlockedSeatsForSession(activeSessao.id)}
                     onSelectionChange={setSelectedSeats} 
                   />
@@ -180,7 +179,6 @@ export default function MovieDetail() {
               )}
             </AnimatePresence>
             
-            {/* Footer de Ação */}
             <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
               <div>
                 <p className="text-slate-400 text-sm">Total a pagar</p>

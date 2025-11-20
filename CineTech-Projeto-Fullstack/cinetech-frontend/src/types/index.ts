@@ -25,9 +25,7 @@ export interface ItemReserva {
   id: number;
   quantidade: number;
   sessao: Sessao;
-  // Backend pode retornar string "A1,A2" ou null
   assentos?: string; 
-  // Frontend usa este array
   selectedSeats?: string[]; 
 }
 
@@ -37,4 +35,13 @@ export interface Reserva {
   status: 'ABERTO' | 'CONFIRMADO' | 'CANCELADO';
   valorTotal: number;
   itens: ItemReserva[];
+}
+
+// Novo Tipo Usuário
+export interface Usuario {
+  id: number;
+  nome: string;
+  email: string;
+  perfil: 'USER' | 'ADMIN';
+  senha?: string; // Opcional no frontend
 }

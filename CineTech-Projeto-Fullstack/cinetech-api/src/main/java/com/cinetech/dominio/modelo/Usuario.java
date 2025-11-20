@@ -19,9 +19,14 @@ public class Usuario {
     @Column(nullable = false, unique = true)
     private String email;
 
-    /**
-     * CORREÇÃO: @JsonIgnore evita recursão (Usuario -> Reserva -> Usuario...).
-     */
+    // NOVO: Senha do usuário
+    @Column(nullable = false)
+    private String senha;
+
+    // NOVO: Perfil (USER ou ADMIN)
+    @Column(nullable = false)
+    private String perfil;
+
     @OneToMany(mappedBy = "usuario")
     @JsonIgnore
     private List<Reserva> reservas;
@@ -35,6 +40,13 @@ public class Usuario {
     public void setNome(String nome) { this.nome = nome; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+    
+    public String getSenha() { return senha; }
+    public void setSenha(String senha) { this.senha = senha; }
+    
+    public String getPerfil() { return perfil; }
+    public void setPerfil(String perfil) { this.perfil = perfil; }
+
     public List<Reserva> getReservas() { return reservas; }
     public void setReservas(List<Reserva> reservas) { this.reservas = reservas; }
 

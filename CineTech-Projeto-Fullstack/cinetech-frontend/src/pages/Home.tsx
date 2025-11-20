@@ -1,10 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom"; // Import useNavigate
 import { Film, Clock, Tag, Play } from "lucide-react";
 import { motion } from "framer-motion";
 import { getFilmes } from "../api";
 import type { Filme } from "../types";
 import { Card, Button, MovieCardSkeleton } from "../components/UiComponents";
+import { useAuth } from "../context/AuthContext"; // Import Auth
 
 const CATEGORIES = ["Todos", "Ação", "Sci-Fi", "Drama", "Aventura"];
 
@@ -14,46 +15,53 @@ export default function Home() {
   const [activeFilter, setActiveFilter] = useState("Todos");
   const [searchParams] = useSearchParams();
   const searchTerm = searchParams.get("q")?.toLowerCase() || "";
+  
+  // Hooks para Proteção
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Simula um loading um pouco maior para mostrar o Skeleton
     const timer = setTimeout(() => {
       getFilmes().then(setFilmes).finally(() => setLoading(false));
     }, 800);
     return () => clearTimeout(timer);
   }, []);
 
-  // Lógica de filtragem (Busca da Navbar + Tags Locais)
+  // Proteção de Rotas
+  const handleProtectedAction = (e: React.MouseEvent, path: string) => {
+    e.preventDefault();
+    if (!user) {
+        navigate("/login");
+    } else {
+        navigate(path);
+    }
+  };
+
   const filteredFilmes = useMemo(() => {
     return filmes.filter(f => {
       const matchesSearch = f.titulo.toLowerCase().includes(searchTerm);
-      // Simulação de categorias baseada no título/sinopse (já que a API mock não tem gênero)
       const mockGenre = f.titulo.includes("Duna") || f.titulo.includes("Interestelar") ? "Sci-Fi" : "Ação";
       const matchesCategory = activeFilter === "Todos" || mockGenre === activeFilter;
       return matchesSearch && matchesCategory;
     });
   }, [filmes, searchTerm, activeFilter]);
 
-  // Filme destaque (o primeiro da lista ou um fixo)
-  const featuredMovie = filmes[1]; // Duna como exemplo
+  const featuredMovie = filmes[1];
 
   return (
     <div className="animate-fade-in pb-20">
       
-      {/* Hero Section Imersiva */}
+      {/* Hero Section */}
       {!loading && featuredMovie && !searchTerm && (
         <div className="relative w-full h-[500px] md:h-[600px] mb-12 overflow-hidden rounded-3xl shadow-2xl shadow-black mx-auto max-w-7xl">
-          {/* Background com Overlay Gradiente */}
           <div className="absolute inset-0">
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent z-10" />
             <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/40 to-transparent z-10" />
             <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-              {/* Placeholder Visual para o Banner (Manteremos o genérico de cinema para o Hero, pois pôsteres são verticais) */}
               <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1533613220915-609f661a6fe1?q=80&w=2560&auto=format&fit=crop')] bg-cover bg-center opacity-50" />
             </div>
           </div>
 
-          {/* Conteúdo do Hero */}
           <div className="absolute bottom-0 left-0 z-20 p-8 md:p-16 max-w-3xl">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -70,12 +78,10 @@ export default function Home() {
                 {featuredMovie.sinopse}
               </p>
               <div className="flex gap-4">
-                <Link to={`/filme/${featuredMovie.id}`}>
-                  <Button className="h-12 px-8 text-lg" variant="primary">
-                    <Tag size={20} /> Reservar Agora
-                  </Button>
-                </Link>
-                <Button className="h-12 px-8 text-lg" variant="secondary">
+                <Button onClick={(e) => handleProtectedAction(e, `/filme/${featuredMovie.id}`)} className="h-12 px-8 text-lg" variant="primary">
+                  <Tag size={20} /> Reservar Agora
+                </Button>
+                <Button onClick={(e) => handleProtectedAction(e, `/filme/${featuredMovie.id}`)} className="h-12 px-8 text-lg" variant="secondary">
                   <Play size={20} /> Trailer
                 </Button>
               </div>
@@ -86,14 +92,11 @@ export default function Home() {
 
       {/* Container Principal */}
       <div className="container mx-auto px-4 max-w-7xl">
-        
-        {/* Filtros e Cabeçalho da Lista */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-6">
           <h2 className="text-2xl font-bold text-white flex items-center gap-2">
             {searchTerm ? `Resultados para "${searchTerm}"` : "Em Cartaz"}
           </h2>
           
-          {/* Tags de Filtro */}
           <div className="flex gap-2 overflow-x-auto pb-2 w-full md:w-auto scrollbar-hide">
             {CATEGORIES.map(cat => (
               <button
@@ -111,10 +114,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Grid de Filmes */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {loading ? (
-            // Skeletons
             Array.from({ length: 4 }).map((_, i) => <MovieCardSkeleton key={i} />)
           ) : filteredFilmes.length > 0 ? (
             filteredFilmes.map((filme, index) => (
@@ -126,7 +127,6 @@ export default function Home() {
               >
                 <Card className="flex flex-col group h-full">
                   <div className="h-[400px] bg-slate-800 flex items-center justify-center relative overflow-hidden">
-                    {/* Lógica de Imagem ou Placeholder */}
                     {filme.imagemUrl ? (
                       <img 
                         src={filme.imagemUrl} 
@@ -140,11 +140,9 @@ export default function Home() {
                       </>
                     )}
                     
-                    {/* Botão flutuante no hover */}
+                    {/* Botão flutuante */}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40 backdrop-blur-[2px]">
-                      <Link to={`/filme/${filme.id}`}>
-                        <Button className="rounded-full px-6">Ver Detalhes</Button>
-                      </Link>
+                      <Button onClick={(e) => handleProtectedAction(e, `/filme/${filme.id}`)} className="rounded-full px-6">Ver Detalhes</Button>
                     </div>
                   </div>
                   <div className="p-5 flex flex-col flex-1">

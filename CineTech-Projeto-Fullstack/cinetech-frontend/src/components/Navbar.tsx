@@ -1,15 +1,18 @@
-import { Film, ShoppingCart, User, Search } from "lucide-react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Film, ShoppingCart, User, Search, LogIn, UserPlus, LogOut } from "lucide-react";
+import { Link, useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import { useState, useEffect } from "react";
+import { Button } from "./UiComponents";
 
 export const Navbar = () => {
   const { itemCount } = useCart();
+  const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
 
-  // Sincroniza o input local com a URL (útil se navegar via voltar/avançar)
   useEffect(() => {
     setSearchTerm(searchParams.get("q") || "");
   }, [searchParams]);
@@ -17,18 +20,21 @@ export const Navbar = () => {
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
-    
-    if (term) {
-      setSearchParams(prev => {
-        prev.set("q", term);
-        return prev;
-      });
-    } else {
-      setSearchParams(prev => {
-        prev.delete("q");
-        return prev;
-      });
+    if (term) setSearchParams(prev => { prev.set("q", term); return prev; });
+    else setSearchParams(prev => { prev.delete("q"); return prev; });
+  };
+
+  // Proteção de clique no carrinho
+  const handleCartClick = (e: React.MouseEvent) => {
+    if (!user) {
+        e.preventDefault();
+        navigate("/login");
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
   };
 
   return (
@@ -44,7 +50,7 @@ export const Navbar = () => {
           </span>
         </Link>
 
-        {/* Busca (Centralizada) */}
+        {/* Busca */}
         <div className="flex-1 max-w-md hidden md:block">
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-500 transition-colors" size={18} />
@@ -58,24 +64,50 @@ export const Navbar = () => {
           </div>
         </div>
 
-        {/* Ações */}
-        <div className="flex items-center gap-2">
-          <Link to="/perfil" className={`p-2 rounded-full transition-all hover:bg-slate-800 ${location.pathname === '/perfil' ? 'text-cyan-400 bg-slate-900' : 'text-slate-400'}`}>
-            <User size={22} />
-          </Link>
+        {/* Ações / Auth */}
+        <div className="flex items-center gap-3">
+          {user ? (
+            <>
+               {/* Usuário Logado */}
+               <div className="flex items-center gap-3 mr-2">
+                    <span className="text-xs text-slate-400 hidden lg:block">Olá, {user.nome.split(' ')[0]}</span>
+                    <Link to="/perfil" className={`p-2 rounded-full transition-all hover:bg-slate-800 ${location.pathname === '/perfil' ? 'text-cyan-400 bg-slate-900' : 'text-slate-400'}`} title="Meu Perfil">
+                        <User size={22} />
+                    </Link>
+               </div>
 
-          <Link to="/carrinho" className={`relative p-2 rounded-full transition-all hover:bg-slate-800 ${location.pathname === '/carrinho' ? 'text-cyan-400 bg-slate-900' : 'text-slate-400'}`}>
-            <ShoppingCart size={22} />
-            {itemCount > 0 && (
-              <span className="absolute top-0 right-0 h-5 w-5 flex items-center justify-center rounded-full bg-cyan-500 text-[10px] font-bold text-white shadow-lg shadow-cyan-500/50 animate-in zoom-in">
-                {itemCount}
-              </span>
-            )}
-          </Link>
+               <Link to="/carrinho" onClick={handleCartClick} className={`relative p-2 rounded-full transition-all hover:bg-slate-800 ${location.pathname === '/carrinho' ? 'text-cyan-400 bg-slate-900' : 'text-slate-400'}`}>
+                <ShoppingCart size={22} />
+                {itemCount > 0 && (
+                  <span className="absolute top-0 right-0 h-5 w-5 flex items-center justify-center rounded-full bg-cyan-500 text-[10px] font-bold text-white shadow-lg shadow-cyan-500/50 animate-in zoom-in">
+                    {itemCount}
+                  </span>
+                )}
+              </Link>
+
+              <button onClick={handleLogout} className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-900 rounded-full transition-colors" title="Sair">
+                <LogOut size={20} />
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Visitante */}
+              <Link to="/login">
+                <Button variant="ghost" className="text-sm hidden sm:flex">
+                    <LogIn size={16} /> Entrar
+                </Button>
+              </Link>
+              <Link to="/cadastro">
+                <Button variant="primary" className="text-sm h-9 px-4">
+                    <UserPlus size={16} /> Cadastrar
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
       
-      {/* Busca Mobile (aparece apenas em telas pequenas) */}
+      {/* Busca Mobile */}
       <div className="md:hidden px-4 pb-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
