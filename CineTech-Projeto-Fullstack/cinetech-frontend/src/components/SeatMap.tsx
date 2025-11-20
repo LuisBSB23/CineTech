@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 interface SeatMapProps {
   sessaoId: number;
-  occupiedCount: number; // Apenas para simular ocupação
+  occupiedCount: number; // Número exato de assentos ocupados vindo do backend
   onSelectionChange: (count: number) => void;
 }
 
@@ -12,35 +12,46 @@ interface SeatMapProps {
 type SeatStatus = 'free' | 'occupied' | 'selected';
 
 export const SeatMap = ({ sessaoId, occupiedCount, onSelectionChange }: SeatMapProps) => {
+  // Configuração para 80 assentos (8 fileiras x 10 colunas)
   const ROWS = 8;
   const COLS = 10;
+  
   const [grid, setGrid] = useState<SeatStatus[][]>([]);
   const [selectedCount, setSelectedCount] = useState(0);
 
-  // Inicializa o mapa com assentos aleatórios ocupados
   useEffect(() => {
     const newGrid: SeatStatus[][] = [];
-    let simulatedOccupied = 0;
+    // Contador para preencher os assentos ocupados sequencialmente
+    // (Já que o backend não guarda a posição exata, preenchemos os primeiros N assentos)
+    let currentOccupied = 0;
 
     for (let i = 0; i < ROWS; i++) {
       const row: SeatStatus[] = [];
       for (let j = 0; j < COLS; j++) {
-        // Simulação: 30% de chance de estar ocupado, mas respeita o limite lógico
-        const isOccupied = Math.random() < 0.3 && simulatedOccupied < occupiedCount;
-        if (isOccupied) simulatedOccupied++;
-        row.push(isOccupied ? 'occupied' : 'free');
+        // Se ainda precisamos marcar assentos como ocupados, marca este
+        const isOccupied = currentOccupied < occupiedCount;
+        
+        if (isOccupied) {
+          currentOccupied++;
+          row.push('occupied');
+        } else {
+          row.push('free');
+        }
       }
       newGrid.push(row);
     }
     setGrid(newGrid);
     setSelectedCount(0);
     onSelectionChange(0);
-  }, [sessaoId]);
+  }, [sessaoId, occupiedCount]); // Recarrega se a sessão ou a ocupação mudar
 
   const toggleSeat = (r: number, c: number) => {
     if (grid[r][c] === 'occupied') return;
 
     const newGrid = [...grid];
+    // Cria uma cópia da linha para evitar mutação direta do estado aninhado
+    newGrid[r] = [...newGrid[r]]; 
+    
     const isSelected = newGrid[r][c] === 'selected';
     newGrid[r][c] = isSelected ? 'free' : 'selected';
     
@@ -61,7 +72,7 @@ export const SeatMap = ({ sessaoId, occupiedCount, onSelectionChange }: SeatMapP
         </div>
       </div>
 
-      {/* Grid */}
+      {/* Grid de Assentos */}
       <div className="grid gap-2 min-w-[300px] justify-center mx-auto" style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}>
         {grid.map((row, rowIndex) => (
           row.map((status, colIndex) => (
@@ -77,8 +88,9 @@ export const SeatMap = ({ sessaoId, occupiedCount, onSelectionChange }: SeatMapP
                 status === 'occupied' && "bg-red-900/40 text-red-700 cursor-not-allowed border border-red-900/20",
                 status === 'selected' && "bg-cyan-500 text-white shadow-cyan-500/50 shadow-md ring-2 ring-cyan-300/30"
               )}
+              title={`Fileira ${String.fromCharCode(65 + rowIndex)}, Assento ${colIndex + 1}`}
             >
-              {/* Letra da fileira + número */}
+              {/* Mostra identificação apenas se selecionado */}
               {status === 'selected' && <span className="scale-75">{String.fromCharCode(65 + rowIndex)}{colIndex + 1}</span>}
             </motion.button>
           ))
