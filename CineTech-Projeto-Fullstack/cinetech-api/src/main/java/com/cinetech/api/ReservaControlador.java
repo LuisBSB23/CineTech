@@ -71,6 +71,14 @@ public class ReservaControlador {
         return reservaServico.listarHistoricoUsuario(usuarioId);
     }
 
+    // NOVO ENDPOINT: Recuperar Reserva Aberta (Carrinho)
+    @GetMapping("/usuario/{usuarioId}/aberta")
+    public ResponseEntity<?> getReservaAberta(@PathVariable @NonNull Long usuarioId) {
+        return reservaServico.buscarReservaAberta(usuarioId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     // ENDPOINT ASSENTOS OCUPADOS
     // CORREÇÃO: Adicionado @NonNull para garantir segurança de tipo ao chamar o serviço
     @GetMapping("/sessao/{sessaoId}/ocupados")

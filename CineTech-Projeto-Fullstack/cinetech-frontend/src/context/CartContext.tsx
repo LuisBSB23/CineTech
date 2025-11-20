@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, type ReactNode, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { type Reserva, type Sessao, type ItemReserva } from '../types';
-import { criarReserva, adicionarItem, confirmarReserva } from '../api/index';
+import { criarReserva, adicionarItem, confirmarReserva, getReservaAberta } from '../api';
 import { useAuth } from './AuthContext';
 
 interface CartContextType {
@@ -23,9 +23,26 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Limpa o carrinho se o utilizador fizer logout
+  // MODIFICADO: Carrega o carrinho (reserva aberta) quando o utilizador faz login
   useEffect(() => {
-    if (!user) {
+    if (user) {
+        setLoading(true);
+        getReservaAberta(user.id)
+            .then(data => {
+                // CORREÇÃO DO ERRO: Se o valorTotal vier nulo do banco (reserva aberta), calculamos aqui
+                if (data.itens && (data.valorTotal === null || data.valorTotal === undefined)) {
+                    const totalCalculado = data.itens.reduce((acc, item) => acc + (item.quantidade * item.sessao.valorIngresso), 0);
+                    data.valorTotal = totalCalculado;
+                }
+                setReserva(data);
+            })
+            .catch(() => {
+                // Se der erro 404, significa que não há carrinho aberto. Tudo bem.
+                setReserva(null);
+            })
+            .finally(() => setLoading(false));
+    } else {
+        // Limpa o carrinho local se fizer logout
         setReserva(null);
     }
   }, [user]);

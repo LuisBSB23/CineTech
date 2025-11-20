@@ -79,6 +79,10 @@ export default function Cart() {
     );
   }
 
+  // CORREÇÃO DO ERRO: Garantir que o total existe antes de chamar toFixed
+  // Se reserva.valorTotal for null, recalculamos com base nos itens
+  const total = reserva.valorTotal ?? reserva.itens.reduce((acc, item) => acc + (item.quantidade * item.sessao.valorIngresso), 0);
+
   return (
     <div className="max-w-4xl mx-auto px-4 animate-fade-in">
       <h1 className="text-3xl font-bold text-white mb-8 flex items-center gap-3">
@@ -144,7 +148,7 @@ export default function Cart() {
             <div className="space-y-2">
                 <div className="flex justify-between text-slate-400 text-sm">
                     <span>Subtotal</span>
-                    <span>R$ {reserva.valorTotal.toFixed(2)}</span>
+                    <span>R$ {total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-slate-400 text-sm">
                     <span>Taxa de Serviço</span>
@@ -154,7 +158,7 @@ export default function Cart() {
 
             <div className="flex justify-between text-white font-bold text-2xl pt-4 border-t border-slate-700">
               <span>Total</span>
-              <span className="text-emerald-400">R$ {reserva.valorTotal.toFixed(2)}</span>
+              <span className="text-emerald-400">R$ {total.toFixed(2)}</span>
             </div>
             
             <Button 

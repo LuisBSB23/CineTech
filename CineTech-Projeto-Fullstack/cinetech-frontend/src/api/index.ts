@@ -21,3 +21,6 @@ export const confirmarReserva = (reservaId: number) => api.post<Reserva>(`/reser
 // Novos métodos
 export const getHistorico = (usuarioId: number) => api.get<Reserva[]>(`/reservas/usuario/${usuarioId}/historico`).then(res => res.data);
 export const getAssentosOcupados = (sessaoId: number) => api.get<string[]>(`/reservas/sessao/${sessaoId}/ocupados`).then(res => res.data);
+
+// NOVO: Recuperar carrinho aberto
+export const getReservaAberta = (usuarioId: number) => api.get<Reserva>(`/reservas/usuario/${usuarioId}/aberta`).then(res => res.data);

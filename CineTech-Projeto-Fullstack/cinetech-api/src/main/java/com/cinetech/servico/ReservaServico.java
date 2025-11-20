@@ -36,8 +36,20 @@ public class ReservaServico {
         this.itemReservaRepositorio = itemReservaRepositorio;
     }
 
+    // NOVO MÈTODO: Busca reserva aberta para o contexto do frontend
+    public Optional<Reserva> buscarReservaAberta(Long usuarioId) {
+        return reservaRepositorio.findByUsuarioIdAndStatus(usuarioId, StatusReserva.ABERTO);
+    }
+
     @Transactional
     public Reserva criarReserva(@NonNull Long usuarioId) {
+        // MODIFICAÇÃO: Verifica se já existe uma reserva aberta para este utilizador.
+        // Se existir, retorna ela em vez de criar uma nova. Isso garante a persistência do carrinho.
+        Optional<Reserva> reservaExistente = reservaRepositorio.findByUsuarioIdAndStatus(usuarioId, StatusReserva.ABERTO);
+        if (reservaExistente.isPresent()) {
+            return reservaExistente.get();
+        }
+
         Usuario usuario = usuarioRepositorio.findById(usuarioId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
 
