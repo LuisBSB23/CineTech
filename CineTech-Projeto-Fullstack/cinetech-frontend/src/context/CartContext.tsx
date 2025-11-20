@@ -18,12 +18,12 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth(); // Usa o usuário do contexto de autenticação
+  const { user } = useAuth(); // Usa o utilizador do contexto de autenticação
   const [reserva, setReserva] = useState<Reserva | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Limpa o carrinho se o usuário fizer logout
+  // Limpa o carrinho se o utilizador fizer logout
   useEffect(() => {
     if (!user) {
         setReserva(null);
@@ -32,13 +32,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const addToCart = async (sessao: Sessao, quantidade: number, selectedSeats: string[]) => {
     if (!user) {
-        toast.error("Você precisa fazer login para reservar.");
+        toast.error("Precisa de iniciar sessão para reservar.");
         return;
     }
 
     setLoading(true);
     setError(null);
-    const toastId = toast.loading('Reservando assentos...');
+    const toastId = toast.loading('A reservar lugares...');
 
     try {
       let currentReserva = reserva;
@@ -88,7 +88,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const checkout = async () => {
     if (!reserva) return;
     setLoading(true);
-    const toastId = toast.loading('Processando pagamento...');
+    const toastId = toast.loading('A processar pagamento...');
 
     try {
       await confirmarReserva(reserva.id);

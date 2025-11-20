@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<Usuario | null>(null);
 
   useEffect(() => {
-    // Recuperar usuário do localStorage ao iniciar
+    // Recuperar utilizador do localStorage ao iniciar
     const storedUser = localStorage.getItem("cinetech_user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));

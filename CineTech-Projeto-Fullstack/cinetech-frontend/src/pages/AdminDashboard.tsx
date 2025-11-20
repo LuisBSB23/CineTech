@@ -26,7 +26,7 @@ export default function AdminDashboard() {
           <br/>Esta área está em construção.
         </p>
         <div className="p-4 bg-slate-950 rounded-lg border border-slate-800 text-sm text-slate-500 font-mono">
-          Status: Aguardando implementação de CRUD de Filmes e Sessões.
+          Status: A aguardar implementação de CRUD de Filmes e Sessões.
         </div>
       </Card>
     </div>

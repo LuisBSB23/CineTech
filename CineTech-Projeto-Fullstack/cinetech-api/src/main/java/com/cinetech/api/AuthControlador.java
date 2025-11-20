@@ -2,12 +2,11 @@ package com.cinetech.api;
 
 import com.cinetech.dominio.modelo.Usuario;
 import com.cinetech.dominio.repositorio.UsuarioRepositorio;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -50,7 +49,7 @@ public class AuthControlador {
     }
     
     @PutMapping("/usuario/{id}")
-    public ResponseEntity<?> atualizarPerfil(@PathVariable Long id, @RequestBody UpdateProfileRequest request) {
+    public ResponseEntity<?> atualizarPerfil(@PathVariable @NonNull Long id, @RequestBody UpdateProfileRequest request) {
         return usuarioRepositorio.findById(id).map(usuario -> {
             usuario.setNome(request.nome);
             if (request.senha != null && !request.senha.isEmpty()) {

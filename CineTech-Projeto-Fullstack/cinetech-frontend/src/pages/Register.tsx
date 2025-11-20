@@ -27,7 +27,6 @@ export default function Register() {
         toast.success("Cadastro realizado com sucesso!");
         navigate("/");
       } else {
-        // Caso teórico se criássemos admins via form (não é o caso padrão)
         navigate("/admin");
       }
     } catch (err: any) {

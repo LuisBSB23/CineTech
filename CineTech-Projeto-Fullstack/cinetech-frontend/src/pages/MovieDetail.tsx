@@ -5,10 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getFilmes, getSessoes } from "../api/index";
 import type { Filme, Sessao } from "../types/index";
 import { useCart } from "../context/CartContext";
-import { useAuth } from "../context/AuthContext"; // Import Auth
+import { useAuth } from "../context/AuthContext";
 import { Card, Button, MovieCardSkeleton } from "../components/UiComponents";
 import { SeatMap } from "../components/SeatMap";
-import { toast } from "react-hot-toast";
 
 const ALL_ROOMS = [
   { id: 1, nome: "Sala 1 - IMAX" },
@@ -20,7 +19,7 @@ export default function MovieDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart, reserva } = useCart();
-  const { user } = useAuth(); // Hook de Auth
+  const { user } = useAuth();
   
   const [filme, setFilme] = useState<Filme | null>(null);
   const [sessoes, setSessoes] = useState<Sessao[]>([]);
@@ -28,8 +27,6 @@ export default function MovieDetail() {
   const [selectedSessaoId, setSelectedSessaoId] = useState<number | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
 
-  // Proteção: Redireciona se não logado ao tentar montar a tela (Opção B: Permitir ver mas bloquear ações)
-  // Neste caso, seguindo o prompt "ver detalhes pedirá login", vamos redirecionar logo no início:
   useEffect(() => {
     if (!user) {
         navigate("/login");
@@ -54,7 +51,6 @@ export default function MovieDetail() {
   }, [id]);
 
   const handleAddToCart = async () => {
-    // Verificação redundante de segurança
     if (!user) {
         navigate("/login");
         return;
@@ -73,7 +69,7 @@ export default function MovieDetail() {
     return item?.selectedSeats || [];
   };
 
-  if (!user) return null; // Evita flash de conteúdo antes do redirect
+  if (!user) return null;
   if (loading) return <div className="max-w-4xl mx-auto p-8"><MovieCardSkeleton /></div>;
   if (!filme) return <div className="p-20 text-center text-white">Filme não encontrado.</div>;
 

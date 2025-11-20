@@ -2,17 +2,16 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CartProvider } from './context/CartContext';
-import { AuthProvider } from './context/AuthContext'; // Import Auth
+import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import Home from './pages/Home';
 import MovieDetail from './pages/MovieDetail';
 import Cart from './pages/Cart';
 import Profile from './pages/Profile';
-import Login from './pages/Login'; // Import
-import Register from './pages/Register'; // Import
-import AdminDashboard from './pages/AdminDashboard'; // Import
+import Login from './pages/Login';
+import Register from './pages/Register';
+import AdminDashboard from './pages/AdminDashboard';
 
-// Wrapper de Animação
 const PageWrapper = ({ children }: { children: React.ReactNode }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}

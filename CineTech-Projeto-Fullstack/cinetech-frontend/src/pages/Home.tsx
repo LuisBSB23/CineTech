@@ -1,11 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
-import { Link, useSearchParams, useNavigate } from "react-router-dom"; // Import useNavigate
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Film, Clock, Tag, Play } from "lucide-react";
 import { motion } from "framer-motion";
 import { getFilmes } from "../api";
 import type { Filme } from "../types";
 import { Card, Button, MovieCardSkeleton } from "../components/UiComponents";
-import { useAuth } from "../context/AuthContext"; // Import Auth
+import { useAuth } from "../context/AuthContext";
 
 const CATEGORIES = ["Todos", "Ação", "Sci-Fi", "Drama", "Aventura"];
 

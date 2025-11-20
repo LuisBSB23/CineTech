@@ -68,7 +68,7 @@ export const Navbar = () => {
         <div className="flex items-center gap-3">
           {user ? (
             <>
-               {/* Usuário Logado */}
+               {/* Utilizador Logado */}
                <div className="flex items-center gap-3 mr-2">
                     <span className="text-xs text-slate-400 hidden lg:block">Olá, {user.nome.split(' ')[0]}</span>
                     <Link to="/perfil" className={`p-2 rounded-full transition-all hover:bg-slate-800 ${location.pathname === '/perfil' ? 'text-cyan-400 bg-slate-900' : 'text-slate-400'}`} title="Meu Perfil">

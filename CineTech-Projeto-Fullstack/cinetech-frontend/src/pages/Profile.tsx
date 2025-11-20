@@ -3,7 +3,7 @@ import { User, Ticket, CreditCard, Settings, Save, Edit2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import axios from "axios";
-import { TicketCard, Button, Card } from "../components/UiComponents";
+import { TicketCard, Button } from "../components/UiComponents";
 import { getHistorico } from "../api/index";
 import { type Reserva } from "../types";
 import { useAuth } from "../context/AuthContext";
@@ -15,7 +15,6 @@ export default function Profile() {
   const [historico, setHistorico] = useState<Reserva[]>([]);
   const [loadingHist, setLoadingHist] = useState(true);
   
-  // Estados de Edição
   const [isEditing, setIsEditing] = useState(false);
   const [editNome, setEditNome] = useState("");
   const [editSenha, setEditSenha] = useState("");
@@ -27,7 +26,6 @@ export default function Profile() {
         return;
     }
     
-    // Carrega dados iniciais de edição
     setEditNome(user.nome);
     
     getHistorico(user.id)
@@ -47,7 +45,7 @@ export default function Profile() {
         updateUser(res.data);
         toast.success("Perfil atualizado com sucesso!");
         setIsEditing(false);
-        setEditSenha(""); // Limpa senha por segurança
+        setEditSenha("");
     } catch (error) {
         toast.error("Erro ao atualizar perfil.");
     } finally {

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShoppingCart, CheckCircle, Film, AlertCircle, Ticket } from "lucide-react"; 
-// Caminhos corrigidos conforme a estrutura do projeto
 import { useCart } from "../context/CartContext";
 import { Card, Button } from "../components/UiComponents";
 import { type ItemReserva } from "../types/index";
@@ -15,12 +14,11 @@ export default function Cart() {
     try {
       await checkout();
       setSuccess(true);
-      // Nota: Não chamamos clearCart() aqui imediatamente para podermos mostrar o resumo
     } catch (e) { /* Erro tratado no contexto */ }
   };
 
   const finish = () => {
-    clearCart(); // Limpa o carrinho apenas ao sair da tela de sucesso
+    clearCart();
     navigate('/');
   };
 
@@ -35,7 +33,6 @@ export default function Cart() {
           <h2 className="text-2xl font-bold text-white mb-2">Sucesso!</h2>
           <p className="text-slate-400 mb-6">Sua reserva foi confirmada. Bom filme!</p>
           
-          {/* Resumo dos Ingressos no Sucesso */}
           {reserva && (
             <div className="bg-slate-900/50 rounded-xl p-4 mb-6 text-left max-h-60 overflow-y-auto custom-scrollbar border border-slate-700/50">
               <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Seus Ingressos</h4>
@@ -49,7 +46,6 @@ export default function Cart() {
                       </p>
                     </div>
                     <div className="text-right">
-                       {/* Exibição dos assentos escolhidos */}
                        {item.selectedSeats && item.selectedSeats.length > 0 ? (
                           <span className="text-cyan-400 font-mono text-xs font-bold bg-cyan-950/30 px-2 py-1 rounded border border-cyan-500/20 block mt-1">
                             Assentos: {item.selectedSeats.join(', ')}
@@ -171,7 +167,7 @@ export default function Cart() {
             </Button>
 
             <p className="text-xs text-center text-slate-500 mt-4">
-                Ao confirmar, você concorda com os termos de cancelamento.
+                Ao confirmar, concorda com os termos de cancelamento.
             </p>
           </Card>
         </div>

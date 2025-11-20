@@ -17,7 +17,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Chamada direta ao endpoint de login (ajuste a URL se necessário)
+      // Chamada direta ao endpoint de login
       const res = await axios.post("http://localhost:8080/api/auth/login", { email, senha });
       const user = res.data;
       
