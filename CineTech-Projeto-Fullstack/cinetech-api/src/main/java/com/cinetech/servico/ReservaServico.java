@@ -12,8 +12,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ReservaServico {
@@ -46,9 +49,12 @@ public class ReservaServico {
         return reservaRepositorio.save(novaReserva);
     }
 
+    /**
+     * Adiciona item e salva os assentos escolhidos.
+     */
     @Transactional
-    @SuppressWarnings("null") // CORREÇÃO: Suprime alertas de nulidade na lógica de Optional/Entidades
-    public ItemReserva adicionarItemAReserva(@NonNull Long reservaId, @NonNull Long sessaoId, int quantidade) {
+    @SuppressWarnings("null")
+    public ItemReserva adicionarItemAReserva(@NonNull Long reservaId, @NonNull Long sessaoId, int quantidade, List<String> assentos) {
         if (quantidade <= 0) {
             throw new IllegalArgumentException("Quantidade deve ser maior que zero");
         }
@@ -65,14 +71,23 @@ public class ReservaServico {
         Optional<ItemReserva> itemExistenteOpt = itemReservaRepositorio.findByReservaIdAndSessaoId(reservaId, sessaoId);
         
         ItemReserva itemParaSalvar;
+        
+        // Converte lista de assentos ["A1", "B2"] para String "A1,B2"
+        String assentosStr = (assentos != null && !assentos.isEmpty()) ? String.join(",", assentos) : "";
+
         if (itemExistenteOpt.isPresent()) {
             itemParaSalvar = itemExistenteOpt.get();
             itemParaSalvar.setQuantidade(itemParaSalvar.getQuantidade() + quantidade);
+            // Atualiza assentos
+            if (!assentosStr.isEmpty()) {
+                itemParaSalvar.setAssentos(assentosStr);
+            }
         } else {
             itemParaSalvar = new ItemReserva();
             itemParaSalvar.setReserva(reserva);
             itemParaSalvar.setSessao(sessao);
             itemParaSalvar.setQuantidade(quantidade);
+            itemParaSalvar.setAssentos(assentosStr);
         }
 
         return itemReservaRepositorio.save(itemParaSalvar);
@@ -80,7 +95,6 @@ public class ReservaServico {
 
     @Transactional(noRollbackFor = AssentosEsgotadosExcecao.class)
     public Reserva confirmarReserva(@NonNull Long reservaId) {
-        
         Reserva reserva = reservaRepositorio.findById(reservaId)
                 .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
         
@@ -88,14 +102,10 @@ public class ReservaServico {
         
         for (ItemReserva item : itens) {
             Sessao sessao = item.getSessao();
-            
             if (sessao.getAssentosDisponiveis() < item.getQuantidade()) {
                 reserva.setStatus(StatusReserva.CANCELADO);
                 reservaRepositorio.save(reserva);
-                
-                throw new AssentosEsgotadosExcecao(
-                    "Falha: Assentos esgotados para o filme '" + sessao.getFilme().getTitulo() + "'"
-                );
+                throw new AssentosEsgotadosExcecao("Falha: Assentos esgotados para o filme '" + sessao.getFilme().getTitulo() + "'");
             }
         }
         
@@ -104,12 +114,41 @@ public class ReservaServico {
             Sessao sessao = item.getSessao();
             sessao.diminuirAssentosDisponiveis(item.getQuantidade());
             sessaoRepositorio.save(sessao);
-            
             valorTotalCalculado += sessao.getValorIngresso() * item.getQuantidade();
         }
         
         reserva.setStatus(StatusReserva.CONFIRMADO);
         reserva.setValorTotal(valorTotalCalculado);
         return reservaRepositorio.save(reserva);
+    }
+
+    /**
+     * NOVO: Retorna o Histórico de Compras (Reservas Confirmadas do Usuário)
+     * CORREÇÃO: Adicionado @NonNull para evitar aviso de Null Type Safety
+     */
+    public List<Reserva> listarHistoricoUsuario(@NonNull Long usuarioId) {
+        Usuario usuario = usuarioRepositorio.findById(usuarioId)
+            .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
+        
+        return usuario.getReservas().stream()
+                .filter(r -> r.getStatus() == StatusReserva.CONFIRMADO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * NOVO: Retorna lista de todos os assentos ocupados em uma sessão.
+     * CORREÇÃO: Adicionado @NonNull para evitar aviso de Null Type Safety
+     */
+    public List<String> listarAssentosOcupados(@NonNull Long sessaoId) {
+        List<ItemReserva> itensConfirmados = itemReservaRepositorio.findBySessaoIdAndReservaStatus(sessaoId, StatusReserva.CONFIRMADO);
+        
+        List<String> todosAssentos = new ArrayList<>();
+        for (ItemReserva item : itensConfirmados) {
+            if (item.getAssentos() != null && !item.getAssentos().isEmpty()) {
+                String[] assentos = item.getAssentos().split(",");
+                todosAssentos.addAll(Arrays.asList(assentos));
+            }
+        }
+        return todosAssentos;
     }
 }

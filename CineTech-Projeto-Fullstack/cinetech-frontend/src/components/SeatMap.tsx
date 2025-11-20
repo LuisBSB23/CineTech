@@ -1,50 +1,53 @@
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { motion } from "framer-motion";
+// CORREÇÃO: Caminho explícito para evitar erros de resolução
+import { getAssentosOcupados } from "../api/index";
 
 interface SeatMapProps {
   sessaoId: number;
-  occupiedCount: number; // Assentos ocupados no banco (backend)
-  blockedSeats?: string[]; // Assentos que já estão no carrinho (bloqueio visual frontend)
+  blockedSeats?: string[]; // Assentos no carrinho atual (Frontend)
   onSelectionChange: (selectedSeats: string[]) => void;
 }
 
 type SeatStatus = 'free' | 'occupied' | 'selected' | 'blocked';
 
-export const SeatMap = ({ sessaoId, occupiedCount, blockedSeats = [], onSelectionChange }: SeatMapProps) => {
+export const SeatMap = ({ sessaoId, blockedSeats = [], onSelectionChange }: SeatMapProps) => {
   const ROWS = 8;
   const COLS = 10;
   
-  // Estado local apenas para os selecionados no momento
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+  const [serverOccupiedSeats, setServerOccupiedSeats] = useState<string[]>([]); // Assentos ocupados no DB
+  const [loading, setLoading] = useState(true);
 
-  // Gera o ID do assento (ex: A1, B5)
   const getSeatId = (r: number, c: number) => {
-    const rowLetter = String.fromCharCode(65 + r); // 65 = 'A'
+    const rowLetter = String.fromCharCode(65 + r);
     return `${rowLetter}${c + 1}`;
   };
 
+  // Busca assentos ocupados reais do backend
   useEffect(() => {
-    // Reseta seleção ao mudar de sessão
+    if (!sessaoId) return;
+    setLoading(true);
+    getAssentosOcupados(sessaoId)
+      .then(seats => setServerOccupiedSeats(seats))
+      .catch(err => console.error("Erro ao buscar assentos", err))
+      .finally(() => setLoading(false));
+
     setSelectedSeats([]);
     onSelectionChange([]);
   }, [sessaoId]);
 
-  // Função auxiliar para determinar o status inicial de um assento
   const getSeatStatus = (r: number, c: number): SeatStatus => {
     const seatId = getSeatId(r, c);
     
-    // Lógica para assentos ocupados vindos do Backend (quantidade simples)
-    // Preenchemos sequencialmente (A1, A2...) baseado no occupiedCount
-    // Isso é uma simulação visual já que o backend não guarda posição exata
-    const flatIndex = r * COLS + c;
-    if (flatIndex < occupiedCount) return 'occupied';
+    // Prioridade 1: Ocupado no Servidor (Histórico/Outros utilizadores)
+    if (serverOccupiedSeats.includes(seatId)) return 'occupied';
 
-    // Lógica para assentos no Carrinho (Frontend)
-    // Se o assento estiver na lista de blockedSeats, mostramos como ocupado/bloqueado
+    // Prioridade 2: No carrinho atual (Bloqueio visual local)
     if (blockedSeats.includes(seatId)) return 'blocked';
 
-    // Lógica de seleção atual do usuário
+    // Prioridade 3: Selecionado agora
     if (selectedSeats.includes(seatId)) return 'selected';
 
     return 'free';
@@ -54,7 +57,6 @@ export const SeatMap = ({ sessaoId, occupiedCount, blockedSeats = [], onSelectio
     const seatId = getSeatId(r, c);
     const status = getSeatStatus(r, c);
 
-    // Impede interação com assentos ocupados ou bloqueados pelo carrinho
     if (status === 'occupied' || status === 'blocked') return;
 
     let newSelected: string[];
@@ -69,8 +71,7 @@ export const SeatMap = ({ sessaoId, occupiedCount, blockedSeats = [], onSelectio
   };
 
   return (
-    <div className="w-full overflow-x-auto pb-4">
-      {/* Tela */}
+    <div className={`w-full overflow-x-auto pb-4 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
       <div className="w-full max-w-md mx-auto mb-8">
         <div className="h-2 w-full bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent rounded-full mb-2" />
         <div className="h-12 w-full bg-gradient-to-b from-cyan-500/10 to-transparent transform -perspective-x-45 text-center text-xs text-cyan-500/50 flex items-end justify-center pb-2">
@@ -78,7 +79,6 @@ export const SeatMap = ({ sessaoId, occupiedCount, blockedSeats = [], onSelectio
         </div>
       </div>
 
-      {/* Grid de Assentos */}
       <div className="grid gap-2 min-w-[300px] justify-center mx-auto" style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}>
         {Array.from({ length: ROWS }).map((_, rowIndex) => (
           Array.from({ length: COLS }).map((_, colIndex) => {
@@ -97,7 +97,6 @@ export const SeatMap = ({ sessaoId, occupiedCount, blockedSeats = [], onSelectio
                 className={clsx(
                   "w-6 h-6 sm:w-8 sm:h-8 rounded-t-lg rounded-b-md text-[10px] flex items-center justify-center font-bold transition-colors shadow-sm",
                   status === 'free' && "bg-slate-700 hover:bg-slate-600 text-slate-400 cursor-pointer",
-                  // Unificamos visualmente 'occupied' e 'blocked' como ocupados (vermelho escuro)
                   (status === 'occupied' || status === 'blocked') && "bg-red-900/40 text-red-700 cursor-not-allowed border border-red-900/20",
                   status === 'selected' && "bg-cyan-500 text-white shadow-cyan-500/50 shadow-md ring-2 ring-cyan-300/30"
                 )}
@@ -110,7 +109,6 @@ export const SeatMap = ({ sessaoId, occupiedCount, blockedSeats = [], onSelectio
         ))}
       </div>
 
-      {/* Legenda */}
       <div className="flex justify-center gap-6 mt-8 text-sm text-slate-400">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-slate-700 rounded" /> Livre

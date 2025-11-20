@@ -1,14 +1,13 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { toast } from 'react-hot-toast';
 import { type Reserva, type Sessao, type ItemReserva } from '../types';
-import { criarReserva, adicionarItem, confirmarReserva } from '../api';
+import { criarReserva, adicionarItem, confirmarReserva } from '../api/index'; // Import explícito
 
 interface CartContextType {
   reserva: Reserva | null;
   loading: boolean;
   error: string | null;
   itemCount: number;
-  // Atualizado para aceitar a lista de assentos específicos
   addToCart: (sessao: Sessao, quantidade: number, selectedSeats: string[]) => Promise<void>;
   checkout: () => Promise<void>;
   clearCart: () => void;
@@ -37,8 +36,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         setReserva(currentReserva);
       }
 
-      // O backend registra apenas a quantidade, mas o frontend guardará os IDs dos assentos no estado
-      const novoItem = await adicionarItem(currentReserva.id, sessao.id, quantidade);
+      // Envia os assentos para o backend!
+      const novoItem = await adicionarItem(currentReserva.id, sessao.id, quantidade, selectedSeats);
 
       setReserva((prev: Reserva | null) => {
         if (!prev) return null;
@@ -48,21 +47,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         let newItens = [...itensSeguros];
         
         if (existingIdx >= 0) {
-          // Se já existe item para essa sessão, soma a quantidade e combina os assentos
-          const itemExistente = newItens[existingIdx];
-          const assentosAtualizados = [
-            ...(itemExistente.selectedSeats || []),
-            ...selectedSeats
-          ];
-          
           newItens[existingIdx] = { 
-            ...itemExistente, 
-            quantidade: itemExistente.quantidade + quantidade,
-            selectedSeats: assentosAtualizados
+            ...novoItem,
+            selectedSeats: novoItem.assentos ? novoItem.assentos.split(',') : selectedSeats
           };
         } else {
-          // Novo item com os assentos selecionados
-          newItens.push({ ...novoItem, sessao, selectedSeats });
+          newItens.push({ 
+            ...novoItem, 
+            sessao, 
+            selectedSeats: novoItem.assentos ? novoItem.assentos.split(',') : selectedSeats 
+          });
         }
         
         const novoTotal = newItens.reduce((acc: number, i: ItemReserva) => acc + (i.sessao.valorIngresso * i.quantidade), 0);
@@ -88,7 +82,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     try {
       await confirmarReserva(reserva.id);
       toast.success('Compra realizada com sucesso!', { id: toastId });
-      // Após sucesso, o clearCart será chamado pela UI ou redirecionamento
     } catch (err: any) {
       const msg = typeof err.response?.data === 'string' ? err.response.data : "Erro ao finalizar compra.";
       setError(msg);

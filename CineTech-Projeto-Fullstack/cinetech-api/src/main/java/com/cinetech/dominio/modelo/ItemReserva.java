@@ -17,15 +17,15 @@ public class ItemReserva {
     @Column(nullable = false)
     private int quantidade;
 
+    // NOVO CAMPO: Armazena os assentos como texto (ex: "A1,A2,B5")
+    @Column(name = "assentos")
+    private String assentos;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reserva_id", nullable = false)
     @JsonIgnore
     private Reserva reserva;
 
-    /**
-     * ALTERADO: FetchType.EAGER garante que ao pegar um item, 
-     * a sessão (e consequentemente o filme/sala) venha junto.
-     */
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "sessao_id", nullable = false)
     private Sessao sessao;
@@ -37,6 +37,11 @@ public class ItemReserva {
     public void setId(Long id) { this.id = id; }
     public int getQuantidade() { return quantidade; }
     public void setQuantidade(int quantidade) { this.quantidade = quantidade; }
+    
+    // Getters e Setters para Assentos
+    public String getAssentos() { return assentos; }
+    public void setAssentos(String assentos) { this.assentos = assentos; }
+
     public Reserva getReserva() { return reserva; }
     public void setReserva(Reserva reserva) { this.reserva = reserva; }
     

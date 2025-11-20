@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/reservas")
 public class ReservaControlador {
@@ -23,7 +25,7 @@ public class ReservaControlador {
     }
 
     @PostMapping
-    @SuppressWarnings("null") // CORREÇÃO: Suprime o aviso de conversão Long -> @NonNull Long
+    @SuppressWarnings("null")
     public ResponseEntity<?> criarNovaReserva(@Valid @RequestBody @NonNull CriarReservaRequest request) {
         try {
             Reserva novaReserva = reservaServico.criarReserva(request.getUsuarioId());
@@ -40,7 +42,8 @@ public class ReservaControlador {
             ItemReserva item = reservaServico.adicionarItemAReserva(
                 id, 
                 request.getSessaoId(), 
-                request.getQuantidade()
+                request.getQuantidade(),
+                request.getAssentos() // Agora passamos a lista de assentos
             );
             return ResponseEntity.ok(item);
         } catch (EntityNotFoundException | IllegalArgumentException | IllegalStateException e) {
@@ -54,12 +57,24 @@ public class ReservaControlador {
         try {
             Reserva reservaConfirmada = reservaServico.confirmarReserva(id);
             return ResponseEntity.ok(reservaConfirmada); 
-            
         } catch (AssentosEsgotadosExcecao e) {
             return ResponseEntity.badRequest().body(e.getMessage()); 
-            
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Erro interno no servidor: " + e.getMessage());
         }
+    }
+
+    // ENDPOINT HISTÓRICO
+    // CORREÇÃO: Adicionado @NonNull para garantir segurança de tipo ao chamar o serviço
+    @GetMapping("/usuario/{usuarioId}/historico")
+    public List<Reserva> getHistorico(@PathVariable @NonNull Long usuarioId) {
+        return reservaServico.listarHistoricoUsuario(usuarioId);
+    }
+
+    // ENDPOINT ASSENTOS OCUPADOS
+    // CORREÇÃO: Adicionado @NonNull para garantir segurança de tipo ao chamar o serviço
+    @GetMapping("/sessao/{sessaoId}/ocupados")
+    public List<String> getAssentosOcupados(@PathVariable @NonNull Long sessaoId) {
+        return reservaServico.listarAssentosOcupados(sessaoId);
     }
 }

@@ -25,7 +25,10 @@ export interface ItemReserva {
   id: number;
   quantidade: number;
   sessao: Sessao;
-  selectedSeats?: string[]; // Novo campo para armazenar os IDs dos assentos (ex: ['A1', 'A2'])
+  // Backend pode retornar string "A1,A2" ou null
+  assentos?: string; 
+  // Frontend usa este array
+  selectedSeats?: string[]; 
 }
 
 export interface Reserva {
