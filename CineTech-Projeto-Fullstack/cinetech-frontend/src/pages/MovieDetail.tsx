@@ -59,10 +59,17 @@ export default function MovieDetail() {
       <div className="grid md:grid-cols-3 gap-8 px-4">
         {/* Coluna Esquerda: Info do Filme */}
         <div className="md:col-span-1 space-y-6">
-          <div className="rounded-2xl overflow-hidden shadow-2xl shadow-cyan-900/10 border border-slate-800">
-             <div className="bg-slate-800 aspect-[2/3] flex items-center justify-center">
-                <Info className="text-slate-600" size={64} />
-                {/* Aqui iria o poster real */}
+          <div className="rounded-2xl overflow-hidden shadow-2xl shadow-cyan-900/10 border border-slate-800 bg-slate-800">
+             <div className="aspect-[2/3] flex items-center justify-center relative">
+                {filme.imagemUrl ? (
+                  <img 
+                    src={filme.imagemUrl} 
+                    alt={filme.titulo} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Info className="text-slate-600" size={64} />
+                )}
              </div>
           </div>
           <div>
@@ -117,8 +124,8 @@ export default function MovieDetail() {
                 >
                   <SeatMap 
                     sessaoId={activeSessao.id} 
-                    // CORREÇÃO: Acessando capacidadeTotal através do objeto 'sala'
-                    occupiedCount={activeSessao.sala.capacidadeTotal - activeSessao.assentosDisponiveis} 
+                    // Proteção de acesso a propriedade sala
+                    occupiedCount={activeSessao.sala ? activeSessao.sala.capacidadeTotal - activeSessao.assentosDisponiveis : 0} 
                     onSelectionChange={setSeatCount} 
                   />
                 </motion.div>

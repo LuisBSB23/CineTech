@@ -48,8 +48,8 @@ export default function Home() {
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent z-10" />
             <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/40 to-transparent z-10" />
             <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-              {/* Placeholder Visual para o Banner */}
-              <div className="w-full h-full bg-[url('[https://images.unsplash.com/photo-1533613220915-609f661a6fe1?q=80&w=2560&auto=format&fit=crop](https://images.unsplash.com/photo-1533613220915-609f661a6fe1?q=80&w=2560&auto=format&fit=crop)')] bg-cover bg-center opacity-50" />
+              {/* Placeholder Visual para o Banner (Manteremos o genérico de cinema para o Hero, pois pôsteres são verticais) */}
+              <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1533613220915-609f661a6fe1?q=80&w=2560&auto=format&fit=crop')] bg-cover bg-center opacity-50" />
             </div>
           </div>
 
@@ -125,9 +125,20 @@ export default function Home() {
                 transition={{ duration: 0.4, delay: index * 0.1 }}
               >
                 <Card className="flex flex-col group h-full">
-                  <div className="h-64 bg-slate-800 flex items-center justify-center relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-80" />
-                    <Film size={48} className="text-slate-600 group-hover:scale-110 group-hover:text-cyan-500 transition-all duration-500" />
+                  <div className="h-[400px] bg-slate-800 flex items-center justify-center relative overflow-hidden">
+                    {/* Lógica de Imagem ou Placeholder */}
+                    {filme.imagemUrl ? (
+                      <img 
+                        src={filme.imagemUrl} 
+                        alt={filme.titulo}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <>
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-80" />
+                        <Film size={48} className="text-slate-600 group-hover:scale-110 group-hover:text-cyan-500 transition-all duration-500" />
+                      </>
+                    )}
                     
                     {/* Botão flutuante no hover */}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40 backdrop-blur-[2px]">

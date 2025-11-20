@@ -17,13 +17,15 @@ public class Filme {
     private String titulo;
 
     @Lob
+    @Column(columnDefinition = "TEXT") // Garante que o banco use um tipo TEXT para sinopses longas
     private String sinopse;
 
     private int duracaoMinutos;
+    
+    // NOVO CAMPO: URL da Imagem
+    @Column(length = 500) // Aumenta o tamanho para URLs longas
+    private String imagemUrl;
 
-    /**
-     * CORREÇÃO: @JsonIgnore evita recursão (Filme -> Sessao -> Filme...).
-     */
     @OneToMany(mappedBy = "filme")
     @JsonIgnore
     private List<Sessao> sessoes;
@@ -39,6 +41,11 @@ public class Filme {
     public void setSinopse(String sinopse) { this.sinopse = sinopse; }
     public int getDuracaoMinutos() { return duracaoMinutos; }
     public void setDuracaoMinutos(int duracaoMinutos) { this.duracaoMinutos = duracaoMinutos; }
+    
+    // Getters e Setters para imagemUrl
+    public String getImagemUrl() { return imagemUrl; }
+    public void setImagemUrl(String imagemUrl) { this.imagemUrl = imagemUrl; }
+    
     public List<Sessao> getSessoes() { return sessoes; }
     public void setSessoes(List<Sessao> sessoes) { this.sessoes = sessoes; }
 

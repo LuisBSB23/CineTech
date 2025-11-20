@@ -3,6 +3,7 @@ export interface Filme {
   titulo: string;
   sinopse: string;
   duracaoMinutos: number;
+  imagemUrl: string; // Novo campo para a imagem
 }
 
 export interface Sala {
