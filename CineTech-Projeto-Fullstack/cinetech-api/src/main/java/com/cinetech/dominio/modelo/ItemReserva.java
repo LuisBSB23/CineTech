@@ -17,16 +17,16 @@ public class ItemReserva {
     @Column(nullable = false)
     private int quantidade;
 
-    /**
-     * CORREÇÃO: @JsonIgnore impede que o Item tente serializar a Reserva "pai",
-     * evitando o loop infinito e erro 500.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reserva_id", nullable = false)
     @JsonIgnore
     private Reserva reserva;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    /**
+     * ALTERADO: FetchType.EAGER garante que ao pegar um item, 
+     * a sessão (e consequentemente o filme/sala) venha junto.
+     */
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "sessao_id", nullable = false)
     private Sessao sessao;
     

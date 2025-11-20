@@ -7,8 +7,7 @@ import java.util.Objects;
 
 /**
  * Entidade JPA que mapeia a tabela TB_SESSAO.
- * Esta é a classe central que refatora a 'Produto.java' [cite: 8, 9] original.
- * O campo 'assentosDisponiveis' é o "estoque" do sistema.
+ * MODIFICADO: FetchType alterado para EAGER para evitar erros de serialização JSON (LazyInitializationException).
  */
 @Entity
 @Table(name = "TB_SESSAO")
@@ -24,36 +23,28 @@ public class Sessao {
     @Column(nullable = false)
     private Double valorIngresso;
 
-    /**
-     * O "estoque" do backend original [cite: 9].
-     * Este campo é crítico para a lógica de negócio (RF-003, RF-006) [cite: 2].
-     */
     @Column(nullable = false)
     private int assentosDisponiveis;
 
     /**
      * Relacionamento: Muitas Sessões pertencem a um Filme.
-     * 'JoinColumn' define a chave estrangeira.
+     * ALTERADO: FetchType.EAGER garante que o Filme venha junto com a Sessão.
      */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "filme_id", nullable = false)
     private Filme filme;
 
     /**
      * Relacionamento: Muitas Sessões ocorrem em uma Sala.
+     * ALTERADO: FetchType.EAGER garante que a Sala venha junto com a Sessão.
      */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "sala_id", nullable = false)
     private Sala sala;
     
-    // Construtor padrão (JPA)
     public Sessao() {
     }
 
-    /**
-     * Lógica de negócio (similar ao 'diminuirEstoque' [cite: 9] original)
-     * @param quantidade A quantidade de assentos a diminuir.
-     */
     public void diminuirAssentosDisponiveis(int quantidade) {
         if (this.assentosDisponiveis < quantidade) {
             throw new AssentosEsgotadosExcecao(

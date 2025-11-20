@@ -26,15 +26,16 @@ public class Reserva {
 
     private Double valorTotal;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    /**
+     * MODIFICADO: Alterado de LAZY para EAGER.
+     * Isso garante que os dados do Usuário estejam disponíveis quando o controlador
+     * tentar enviar a resposta JSON da confirmação, evitando o erro 500.
+     */
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
-    /**
-     * Relacionamento: Uma Reserva tem muitos Itens.
-     * CORREÇÃO: Inicializa com ArrayList vazio para evitar NullPointerException no JSON/Frontend.
-     */
-    @OneToMany(mappedBy = "reserva", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "reserva", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<ItemReserva> itens = new ArrayList<>();
     
     // Construtor padrão
