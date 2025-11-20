@@ -1,23 +1,33 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Calendar, Clock, ChevronLeft, Info } from "lucide-react";
+import { Calendar, Clock, ChevronLeft, Info, MapPin, Ban } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getFilmes, getSessoes } from "../api";
-import type { Filme, Sessao } from "../types";
+// Corrigindo os caminhos de importação
+import { getFilmes, getSessoes } from "../api/index";
+import type { Filme, Sessao } from "../types/index";
 import { useCart } from "../context/CartContext";
 import { Card, Button, MovieCardSkeleton } from "../components/UiComponents";
 import { SeatMap } from "../components/SeatMap";
 
+// Lista fixa de salas conforme o banco de dados (data.sql)
+const ALL_ROOMS = [
+  { id: 1, nome: "Sala 1 - IMAX" },
+  { id: 2, nome: "Sala 2 - VIP" },
+  { id: 3, nome: "Sala 3 - Padrão" }
+];
+
 export default function MovieDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, reserva } = useCart(); // Pegamos a reserva para verificar itens no carrinho
   
   const [filme, setFilme] = useState<Filme | null>(null);
   const [sessoes, setSessoes] = useState<Sessao[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSessaoId, setSelectedSessaoId] = useState<number | null>(null);
-  const [seatCount, setSeatCount] = useState(0);
+  
+  // Agora armazenamos os IDs dos assentos (strings)
+  const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -26,7 +36,11 @@ export default function MovieDetail() {
         const [filmesRes, sessoesRes] = await Promise.all([getFilmes(), getSessoes(Number(id))]);
         setFilme(filmesRes.find(f => f.id === Number(id)) || null);
         setSessoes(sessoesRes);
-        if (sessoesRes.length > 0) setSelectedSessaoId(sessoesRes[0].id);
+        
+        // Seleciona automaticamente a primeira sessão disponível se houver
+        if (sessoesRes.length > 0) {
+            setSelectedSessaoId(null); // Deixa o utilizador escolher explicitamente
+        }
       } finally {
         setLoading(false);
       }
@@ -36,10 +50,17 @@ export default function MovieDetail() {
 
   const handleAddToCart = async () => {
     const sessao = sessoes.find(s => s.id === selectedSessaoId);
-    if (sessao && seatCount > 0) {
-      await addToCart(sessao, seatCount);
-      setSeatCount(0); // Reseta seleção
+    if (sessao && selectedSeats.length > 0) {
+      await addToCart(sessao, selectedSeats.length, selectedSeats);
+      setSelectedSeats([]); // Reseta seleção local
     }
+  };
+
+  // Recupera assentos já adicionados ao carrinho para a sessão atual (bloqueio visual)
+  const getBlockedSeatsForSession = (sessaoId: number): string[] => {
+    if (!reserva || !reserva.itens) return [];
+    const item = reserva.itens.find(i => i.sessao.id === sessaoId);
+    return item?.selectedSeats || [];
   };
 
   if (loading) return <div className="max-w-4xl mx-auto p-8"><MovieCardSkeleton /></div>;
@@ -91,22 +112,48 @@ export default function MovieDetail() {
               <Calendar className="text-cyan-500"/> Selecione a Sessão
             </h2>
 
-            {/* Tabs de Sessões */}
-            <div className="flex gap-3 overflow-x-auto pb-4 mb-6 scrollbar-thin scrollbar-thumb-slate-700">
-              {sessoes.map(sessao => {
-                 const isSelected = sessao.id === selectedSessaoId;
+            {/* Grid de Salas (Modificação 1) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+              {ALL_ROOMS.map(room => {
+                 // Verifica se existe sessão para este filme nesta sala
+                 const sessionInRoom = sessoes.find(s => s.sala.id === room.id);
+                 const isSelected = sessionInRoom && sessionInRoom.id === selectedSessaoId;
+                 const isDisabled = !sessionInRoom;
+
                  return (
                   <button
-                    key={sessao.id}
-                    onClick={() => { setSelectedSessaoId(sessao.id); setSeatCount(0); }}
-                    className={`flex flex-col items-center p-3 rounded-xl border min-w-[100px] transition-all ${
+                    key={room.id}
+                    onClick={() => {
+                        if (sessionInRoom) {
+                            setSelectedSessaoId(sessionInRoom.id);
+                            setSelectedSeats([]);
+                        }
+                    }}
+                    disabled={isDisabled}
+                    className={`relative flex flex-col items-center justify-center p-4 rounded-xl border transition-all min-h-[100px] ${
                       isSelected 
-                        ? "bg-cyan-600/20 border-cyan-500 text-white shadow-lg shadow-cyan-900/20" 
-                        : "bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:border-slate-600"
+                        ? "bg-cyan-600/20 border-cyan-500 text-white shadow-lg shadow-cyan-900/20 z-10 ring-1 ring-cyan-500" 
+                        : isDisabled
+                            ? "bg-slate-900/30 border-slate-800 text-slate-600 cursor-not-allowed opacity-60"
+                            : "bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:border-slate-500 hover:text-white"
                     }`}
                   >
-                    <span className="text-lg font-bold">{new Date(sessao.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                    <span className="text-xs uppercase mt-1">{sessao.sala.nome}</span>
+                    {sessionInRoom ? (
+                        <>
+                            <span className="text-xl font-bold mb-1">
+                                {new Date(sessionInRoom.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </span>
+                            <span className="text-[10px] uppercase tracking-wider flex items-center gap-1">
+                                <MapPin size={10} /> {room.nome}
+                            </span>
+                        </>
+                    ) : (
+                        <>
+                            <Ban size={24} className="mb-2 opacity-40" />
+                            <span className="text-[10px] uppercase text-center">{room.nome}</span>
+                            <span className="text-[9px] text-slate-600 mt-1">Indisponível</span>
+                        </>
+                    )}
                   </button>
                  );
               })}
@@ -124,9 +171,10 @@ export default function MovieDetail() {
                 >
                   <SeatMap 
                     sessaoId={activeSessao.id} 
-                    // Proteção de acesso a propriedade sala
-                    occupiedCount={activeSessao.sala ? activeSessao.sala.capacidadeTotal - activeSessao.assentosDisponiveis : 0} 
-                    onSelectionChange={setSeatCount} 
+                    occupiedCount={activeSessao.sala.capacidadeTotal - activeSessao.assentosDisponiveis} 
+                    // Modificação 3: Passamos os assentos que já estão no carrinho para bloqueá-los
+                    blockedSeats={getBlockedSeatsForSession(activeSessao.id)}
+                    onSelectionChange={setSelectedSeats} 
                   />
                 </motion.div>
               )}
@@ -137,14 +185,17 @@ export default function MovieDetail() {
               <div>
                 <p className="text-slate-400 text-sm">Total a pagar</p>
                 <p className="text-3xl font-bold text-white">
-                  R$ {activeSessao ? (activeSessao.valorIngresso * seatCount).toFixed(2) : "0.00"}
+                  R$ {activeSessao ? (activeSessao.valorIngresso * selectedSeats.length).toFixed(2) : "0.00"}
                 </p>
-                <p className="text-xs text-slate-500">{seatCount} ingressos selecionados</p>
+                <p className="text-xs text-slate-500">
+                    {selectedSeats.length} ingressos selecionados
+                    {selectedSeats.length > 0 && <span className="text-cyan-500 font-mono ml-1">({selectedSeats.join(', ')})</span>}
+                </p>
               </div>
 
               <Button 
                 onClick={handleAddToCart} 
-                disabled={seatCount === 0} 
+                disabled={selectedSeats.length === 0} 
                 variant="success"
                 className="w-full sm:w-auto h-12 px-8 text-lg shadow-emerald-900/20"
               >

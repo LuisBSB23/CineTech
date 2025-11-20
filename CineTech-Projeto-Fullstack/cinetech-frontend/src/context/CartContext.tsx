@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import { toast } from 'react-hot-toast'; // Nova dependência
+import { toast } from 'react-hot-toast';
 import { type Reserva, type Sessao, type ItemReserva } from '../types';
 import { criarReserva, adicionarItem, confirmarReserva } from '../api';
 
@@ -8,7 +8,8 @@ interface CartContextType {
   loading: boolean;
   error: string | null;
   itemCount: number;
-  addToCart: (sessao: Sessao, quantidade: number) => Promise<void>;
+  // Atualizado para aceitar a lista de assentos específicos
+  addToCart: (sessao: Sessao, quantidade: number, selectedSeats: string[]) => Promise<void>;
   checkout: () => Promise<void>;
   clearCart: () => void;
   setError: (msg: string | null) => void;
@@ -23,10 +24,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const USUARIO_ID = 1; 
 
-  const addToCart = async (sessao: Sessao, quantidade: number) => {
+  const addToCart = async (sessao: Sessao, quantidade: number, selectedSeats: string[]) => {
     setLoading(true);
     setError(null);
-    const toastId = toast.loading('Reservando assentos...'); // Feedback inicial
+    const toastId = toast.loading('Reservando assentos...');
 
     try {
       let currentReserva = reserva;
@@ -36,6 +37,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         setReserva(currentReserva);
       }
 
+      // O backend registra apenas a quantidade, mas o frontend guardará os IDs dos assentos no estado
       const novoItem = await adicionarItem(currentReserva.id, sessao.id, quantidade);
 
       setReserva((prev: Reserva | null) => {
@@ -46,21 +48,33 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         let newItens = [...itensSeguros];
         
         if (existingIdx >= 0) {
-          newItens[existingIdx] = { ...newItens[existingIdx], quantidade: newItens[existingIdx].quantidade + quantidade };
+          // Se já existe item para essa sessão, soma a quantidade e combina os assentos
+          const itemExistente = newItens[existingIdx];
+          const assentosAtualizados = [
+            ...(itemExistente.selectedSeats || []),
+            ...selectedSeats
+          ];
+          
+          newItens[existingIdx] = { 
+            ...itemExistente, 
+            quantidade: itemExistente.quantidade + quantidade,
+            selectedSeats: assentosAtualizados
+          };
         } else {
-          newItens.push({ ...novoItem, sessao });
+          // Novo item com os assentos selecionados
+          newItens.push({ ...novoItem, sessao, selectedSeats });
         }
         
         const novoTotal = newItens.reduce((acc: number, i: ItemReserva) => acc + (i.sessao.valorIngresso * i.quantidade), 0);
         return { ...prev, itens: newItens, valorTotal: novoTotal };
       });
 
-      toast.success('Adicionado ao carrinho!', { id: toastId }); // Sucesso
+      toast.success('Adicionado ao carrinho!', { id: toastId });
 
     } catch (err: any) {
       const msg = err.response?.data || err.message || "Erro ao adicionar item";
       setError(msg);
-      toast.error(msg, { id: toastId }); // Erro
+      toast.error(msg, { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -74,6 +88,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     try {
       await confirmarReserva(reserva.id);
       toast.success('Compra realizada com sucesso!', { id: toastId });
+      // Após sucesso, o clearCart será chamado pela UI ou redirecionamento
     } catch (err: any) {
       const msg = typeof err.response?.data === 'string' ? err.response.data : "Erro ao finalizar compra.";
       setError(msg);

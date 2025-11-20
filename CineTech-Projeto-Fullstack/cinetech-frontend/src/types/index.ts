@@ -3,7 +3,7 @@ export interface Filme {
   titulo: string;
   sinopse: string;
   duracaoMinutos: number;
-  imagemUrl: string; // Novo campo para a imagem
+  imagemUrl: string;
 }
 
 export interface Sala {
@@ -25,6 +25,7 @@ export interface ItemReserva {
   id: number;
   quantidade: number;
   sessao: Sessao;
+  selectedSeats?: string[]; // Novo campo para armazenar os IDs dos assentos (ex: ['A1', 'A2'])
 }
 
 export interface Reserva {

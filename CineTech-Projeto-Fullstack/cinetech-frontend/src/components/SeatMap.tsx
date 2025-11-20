@@ -4,62 +4,68 @@ import { motion } from "framer-motion";
 
 interface SeatMapProps {
   sessaoId: number;
-  occupiedCount: number; // Número exato de assentos ocupados vindo do backend
-  onSelectionChange: (count: number) => void;
+  occupiedCount: number; // Assentos ocupados no banco (backend)
+  blockedSeats?: string[]; // Assentos que já estão no carrinho (bloqueio visual frontend)
+  onSelectionChange: (selectedSeats: string[]) => void;
 }
 
-// Estados do assento
-type SeatStatus = 'free' | 'occupied' | 'selected';
+type SeatStatus = 'free' | 'occupied' | 'selected' | 'blocked';
 
-export const SeatMap = ({ sessaoId, occupiedCount, onSelectionChange }: SeatMapProps) => {
-  // Configuração para 80 assentos (8 fileiras x 10 colunas)
+export const SeatMap = ({ sessaoId, occupiedCount, blockedSeats = [], onSelectionChange }: SeatMapProps) => {
   const ROWS = 8;
   const COLS = 10;
   
-  const [grid, setGrid] = useState<SeatStatus[][]>([]);
-  const [selectedCount, setSelectedCount] = useState(0);
+  // Estado local apenas para os selecionados no momento
+  const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+
+  // Gera o ID do assento (ex: A1, B5)
+  const getSeatId = (r: number, c: number) => {
+    const rowLetter = String.fromCharCode(65 + r); // 65 = 'A'
+    return `${rowLetter}${c + 1}`;
+  };
 
   useEffect(() => {
-    const newGrid: SeatStatus[][] = [];
-    // Contador para preencher os assentos ocupados sequencialmente
-    // (Já que o backend não guarda a posição exata, preenchemos os primeiros N assentos)
-    let currentOccupied = 0;
+    // Reseta seleção ao mudar de sessão
+    setSelectedSeats([]);
+    onSelectionChange([]);
+  }, [sessaoId]);
 
-    for (let i = 0; i < ROWS; i++) {
-      const row: SeatStatus[] = [];
-      for (let j = 0; j < COLS; j++) {
-        // Se ainda precisamos marcar assentos como ocupados, marca este
-        const isOccupied = currentOccupied < occupiedCount;
-        
-        if (isOccupied) {
-          currentOccupied++;
-          row.push('occupied');
-        } else {
-          row.push('free');
-        }
-      }
-      newGrid.push(row);
-    }
-    setGrid(newGrid);
-    setSelectedCount(0);
-    onSelectionChange(0);
-  }, [sessaoId, occupiedCount]); // Recarrega se a sessão ou a ocupação mudar
+  // Função auxiliar para determinar o status inicial de um assento
+  const getSeatStatus = (r: number, c: number): SeatStatus => {
+    const seatId = getSeatId(r, c);
+    
+    // Lógica para assentos ocupados vindos do Backend (quantidade simples)
+    // Preenchemos sequencialmente (A1, A2...) baseado no occupiedCount
+    // Isso é uma simulação visual já que o backend não guarda posição exata
+    const flatIndex = r * COLS + c;
+    if (flatIndex < occupiedCount) return 'occupied';
+
+    // Lógica para assentos no Carrinho (Frontend)
+    // Se o assento estiver na lista de blockedSeats, mostramos como ocupado/bloqueado
+    if (blockedSeats.includes(seatId)) return 'blocked';
+
+    // Lógica de seleção atual do usuário
+    if (selectedSeats.includes(seatId)) return 'selected';
+
+    return 'free';
+  };
 
   const toggleSeat = (r: number, c: number) => {
-    if (grid[r][c] === 'occupied') return;
+    const seatId = getSeatId(r, c);
+    const status = getSeatStatus(r, c);
 
-    const newGrid = [...grid];
-    // Cria uma cópia da linha para evitar mutação direta do estado aninhado
-    newGrid[r] = [...newGrid[r]]; 
-    
-    const isSelected = newGrid[r][c] === 'selected';
-    newGrid[r][c] = isSelected ? 'free' : 'selected';
-    
-    setGrid(newGrid);
-    
-    const newCount = isSelected ? selectedCount - 1 : selectedCount + 1;
-    setSelectedCount(newCount);
-    onSelectionChange(newCount);
+    // Impede interação com assentos ocupados ou bloqueados pelo carrinho
+    if (status === 'occupied' || status === 'blocked') return;
+
+    let newSelected: string[];
+    if (status === 'selected') {
+      newSelected = selectedSeats.filter(id => id !== seatId);
+    } else {
+      newSelected = [...selectedSeats, seatId];
+    }
+
+    setSelectedSeats(newSelected);
+    onSelectionChange(newSelected);
   };
 
   return (
@@ -74,26 +80,33 @@ export const SeatMap = ({ sessaoId, occupiedCount, onSelectionChange }: SeatMapP
 
       {/* Grid de Assentos */}
       <div className="grid gap-2 min-w-[300px] justify-center mx-auto" style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}>
-        {grid.map((row, rowIndex) => (
-          row.map((status, colIndex) => (
-            <motion.button
-              key={`${rowIndex}-${colIndex}`}
-              whileHover={{ scale: status !== 'occupied' ? 1.2 : 1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => toggleSeat(rowIndex, colIndex)}
-              disabled={status === 'occupied'}
-              className={clsx(
-                "w-6 h-6 sm:w-8 sm:h-8 rounded-t-lg rounded-b-md text-[10px] flex items-center justify-center font-bold transition-colors shadow-sm",
-                status === 'free' && "bg-slate-700 hover:bg-slate-600 text-slate-400 cursor-pointer",
-                status === 'occupied' && "bg-red-900/40 text-red-700 cursor-not-allowed border border-red-900/20",
-                status === 'selected' && "bg-cyan-500 text-white shadow-cyan-500/50 shadow-md ring-2 ring-cyan-300/30"
-              )}
-              title={`Fileira ${String.fromCharCode(65 + rowIndex)}, Assento ${colIndex + 1}`}
-            >
-              {/* Mostra identificação apenas se selecionado */}
-              {status === 'selected' && <span className="scale-75">{String.fromCharCode(65 + rowIndex)}{colIndex + 1}</span>}
-            </motion.button>
-          ))
+        {Array.from({ length: ROWS }).map((_, rowIndex) => (
+          Array.from({ length: COLS }).map((_, colIndex) => {
+            const status = getSeatStatus(rowIndex, colIndex);
+            const seatId = getSeatId(rowIndex, colIndex);
+            
+            const isOccupiedOrBlocked = status === 'occupied' || status === 'blocked';
+
+            return (
+              <motion.button
+                key={seatId}
+                whileHover={{ scale: !isOccupiedOrBlocked ? 1.2 : 1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => toggleSeat(rowIndex, colIndex)}
+                disabled={isOccupiedOrBlocked}
+                className={clsx(
+                  "w-6 h-6 sm:w-8 sm:h-8 rounded-t-lg rounded-b-md text-[10px] flex items-center justify-center font-bold transition-colors shadow-sm",
+                  status === 'free' && "bg-slate-700 hover:bg-slate-600 text-slate-400 cursor-pointer",
+                  // Unificamos visualmente 'occupied' e 'blocked' como ocupados (vermelho escuro)
+                  (status === 'occupied' || status === 'blocked') && "bg-red-900/40 text-red-700 cursor-not-allowed border border-red-900/20",
+                  status === 'selected' && "bg-cyan-500 text-white shadow-cyan-500/50 shadow-md ring-2 ring-cyan-300/30"
+                )}
+                title={`Assento ${seatId} - ${status === 'free' ? 'Livre' : 'Ocupado'}`}
+              >
+                {(status === 'selected' || status === 'blocked') && <span className="scale-75">{seatId}</span>}
+              </motion.button>
+            );
+          })
         ))}
       </div>
 
