@@ -1,5 +1,6 @@
 package com.cinetech.dominio.modelo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.springframework.lang.NonNull;
 
@@ -16,8 +17,13 @@ public class ItemReserva {
     @Column(nullable = false)
     private int quantidade;
 
+    /**
+     * CORREÇÃO: @JsonIgnore impede que o Item tente serializar a Reserva "pai",
+     * evitando o loop infinito e erro 500.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reserva_id", nullable = false)
+    @JsonIgnore
     private Reserva reserva;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -35,7 +41,7 @@ public class ItemReserva {
     public void setReserva(Reserva reserva) { this.reserva = reserva; }
     
     @NonNull
-    @SuppressWarnings("null") // CORREÇÃO: Garante que ignoramos o fato do campo privado ser tecnicamente nullable
+    @SuppressWarnings("null")
     public Sessao getSessao() { return sessao; }
     
     public void setSessao(@NonNull Sessao sessao) {

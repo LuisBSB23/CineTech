@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'; // Correção: 'type ReactNode'
-import { type Reserva, type Sessao, type ItemReserva } from '../types'; // Garante que os tipos existem
+import { createContext, useContext, useState, type ReactNode } from 'react';
+import { type Reserva, type Sessao, type ItemReserva } from '../types';
 import { criarReserva, adicionarItem, confirmarReserva } from '../api';
 
 interface CartContextType {
@@ -35,12 +35,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
       const novoItem = await adicionarItem(currentReserva.id, sessao.id, quantidade);
 
-      // Correção: Tipagem explícita para 'prev'
       setReserva((prev: Reserva | null) => {
         if (!prev) return null;
         
-        const existingIdx = prev.itens.findIndex((i: ItemReserva) => i.sessao.id === sessao.id);
-        let newItens = [...prev.itens];
+        // CORREÇÃO: Proteção contra 'itens' nulo (prev.itens || [])
+        const itensSeguros = prev.itens || [];
+        const existingIdx = itensSeguros.findIndex((i: ItemReserva) => i.sessao.id === sessao.id);
+        let newItens = [...itensSeguros];
         
         if (existingIdx >= 0) {
           newItens[existingIdx] = { ...newItens[existingIdx], quantidade: newItens[existingIdx].quantidade + quantidade };
@@ -48,7 +49,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           newItens.push({ ...novoItem, sessao });
         }
         
-        // Correção: Tipagem explícita para 'acc' e 'i' no reduce
         const novoTotal = newItens.reduce((acc: number, i: ItemReserva) => acc + (i.sessao.valorIngresso * i.quantidade), 0);
         return { ...prev, itens: newItens, valorTotal: novoTotal };
       });
@@ -79,8 +79,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
   };
 
-  // Correção: Tipagem explícita no reduce
-  const itemCount = reserva?.itens.reduce((acc: number, i: ItemReserva) => acc + i.quantidade, 0) || 0;
+  // CORREÇÃO: Proteção contra 'itens' nulo no contador (reserva?.itens?.reduce)
+  const itemCount = reserva?.itens?.reduce((acc: number, i: ItemReserva) => acc + i.quantidade, 0) || 0;
 
   return (
     <CartContext.Provider value={{ reserva, loading, error, itemCount, addToCart, checkout, clearCart, setError }}>

@@ -1,13 +1,10 @@
 package com.cinetech.dominio.modelo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Entidade JPA que mapeia a tabela TB_SALA,
- * conforme o esquema do banco de dados [cite: 0].
- */
 @Entity
 @Table(name = "TB_SALA")
 public class Sala {
@@ -17,21 +14,20 @@ public class Sala {
     private Long id;
 
     @Column(nullable = false)
-    private String nome; // Ex: "Sala 3"
+    private String nome;
 
     private int capacidadeTotal;
 
     /**
-     * Mapeamento do relacionamento: Uma Sala pode ter várias Sessões.
+     * CORREÇÃO: @JsonIgnore evita recursão (Sala -> Sessao -> Sala...).
      */
     @OneToMany(mappedBy = "sala")
+    @JsonIgnore
     private List<Sessao> sessoes;
 
-    // Construtor padrão (JPA)
     public Sala() {
     }
 
-    // Getters e Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getNome() { return nome; }

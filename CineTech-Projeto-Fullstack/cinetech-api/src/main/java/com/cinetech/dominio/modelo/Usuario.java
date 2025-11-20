@@ -1,14 +1,10 @@
 package com.cinetech.dominio.modelo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Entidade JPA que mapeia a tabela TB_USUARIO.
- * Esta classe é a refatoração da 'Cliente.java' [cite: 1] original
- * para persistência em banco de dados.
- */
 @Entity
 @Table(name = "TB_USUARIO")
 public class Usuario {
@@ -24,17 +20,15 @@ public class Usuario {
     private String email;
 
     /**
-     * Mapeamento do relacionamento: Um Usuário pode ter muitas Reservas.
-     * 'mappedBy = "usuario"' indica que a entidade Reserva é a dona do relacionamento.
+     * CORREÇÃO: @JsonIgnore evita recursão (Usuario -> Reserva -> Usuario...).
      */
     @OneToMany(mappedBy = "usuario")
+    @JsonIgnore
     private List<Reserva> reservas;
 
-    // Construtor padrão (necessário para JPA)
     public Usuario() {
     }
 
-    // Getters e Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getNome() { return nome; }

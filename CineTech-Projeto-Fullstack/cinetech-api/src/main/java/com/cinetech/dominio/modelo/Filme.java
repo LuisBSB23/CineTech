@@ -1,13 +1,10 @@
 package com.cinetech.dominio.modelo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Entidade JPA que mapeia a tabela TB_FILME,
- * conforme o esquema do banco de dados [cite: 0].
- */
 @Entity
 @Table(name = "TB_FILME")
 public class Filme {
@@ -19,22 +16,21 @@ public class Filme {
     @Column(nullable = false)
     private String titulo;
 
-    @Lob // Para textos longos
+    @Lob
     private String sinopse;
 
     private int duracaoMinutos;
 
     /**
-     * Mapeamento do relacionamento: Um Filme pode ter várias Sessões.
+     * CORREÇÃO: @JsonIgnore evita recursão (Filme -> Sessao -> Filme...).
      */
     @OneToMany(mappedBy = "filme")
+    @JsonIgnore
     private List<Sessao> sessoes;
 
-    // Construtor padrão (JPA)
     public Filme() {
     }
 
-    // Getters e Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getTitulo() { return titulo; }

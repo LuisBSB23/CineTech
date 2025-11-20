@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Filme, Sessao, Reserva, ItemReserva } from '../types'; // Correção: 'import type'
+import type { Filme, Sessao, Reserva, ItemReserva } from '../types';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
