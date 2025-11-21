@@ -43,7 +43,7 @@ public class ReservaControlador {
                 id, 
                 request.getSessaoId(), 
                 request.getQuantidade(),
-                request.getAssentos() // Agora passamos a lista de assentos
+                request.getAssentos()
             );
             return ResponseEntity.ok(item);
         } catch (EntityNotFoundException | IllegalArgumentException | IllegalStateException e) {
@@ -58,20 +58,31 @@ public class ReservaControlador {
             Reserva reservaConfirmada = reservaServico.confirmarReserva(id);
             return ResponseEntity.ok(reservaConfirmada); 
         } catch (AssentosEsgotadosExcecao e) {
-            return ResponseEntity.badRequest().body(e.getMessage()); 
+            // Retorna 409 Conflict para erro de assentos já ocupados
+            return ResponseEntity.status(409).body(e.getMessage()); 
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Erro interno no servidor: " + e.getMessage());
         }
     }
 
-    // ENDPOINT HISTÓRICO
-    // CORREÇÃO: Adicionado @NonNull para garantir segurança de tipo ao chamar o serviço
+    // NOVO ENDPOINT: Cancelar Reserva (Excluir Pedido do Carrinho)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> cancelarReserva(@PathVariable @NonNull Long id) {
+        try {
+            reservaServico.cancelarReserva(id);
+            return ResponseEntity.noContent().build();
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @GetMapping("/usuario/{usuarioId}/historico")
     public List<Reserva> getHistorico(@PathVariable @NonNull Long usuarioId) {
         return reservaServico.listarHistoricoUsuario(usuarioId);
     }
 
-    // NOVO ENDPOINT: Recuperar Reserva Aberta (Carrinho)
     @GetMapping("/usuario/{usuarioId}/aberta")
     public ResponseEntity<?> getReservaAberta(@PathVariable @NonNull Long usuarioId) {
         return reservaServico.buscarReservaAberta(usuarioId)
@@ -79,8 +90,6 @@ public class ReservaControlador {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // ENDPOINT ASSENTOS OCUPADOS
-    // CORREÇÃO: Adicionado @NonNull para garantir segurança de tipo ao chamar o serviço
     @GetMapping("/sessao/{sessaoId}/ocupados")
     public List<String> getAssentosOcupados(@PathVariable @NonNull Long sessaoId) {
         return reservaServico.listarAssentosOcupados(sessaoId);

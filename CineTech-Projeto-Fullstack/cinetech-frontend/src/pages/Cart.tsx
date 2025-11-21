@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShoppingCart, CheckCircle, Film, AlertCircle, Ticket } from "lucide-react"; 
+import { ShoppingCart, CheckCircle, Film, AlertCircle, Ticket, Trash2, Edit3 } from "lucide-react"; 
 import { useCart } from "../context/CartContext";
 import { Card, Button } from "../components/UiComponents";
 import { type ItemReserva } from "../types/index";
 
 export default function Cart() {
-  const { reserva, checkout, clearCart, error, loading, setError } = useCart();
+  const { reserva, checkout, clearCart, cancelOrder, error, loading, setError } = useCart();
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
@@ -20,6 +20,11 @@ export default function Cart() {
   const finish = () => {
     clearCart();
     navigate('/');
+  };
+
+  // Botão de editar: Navega para a página do filme para permitir alterações
+  const handleEdit = (filmeId: number) => {
+      navigate(`/filme/${filmeId}`);
   };
 
   if (success) {
@@ -79,8 +84,6 @@ export default function Cart() {
     );
   }
 
-  // CORREÇÃO DO ERRO: Garantir que o total existe antes de chamar toFixed
-  // Se reserva.valorTotal for null, recalculamos com base nos itens
   const total = reserva.valorTotal ?? reserva.itens.reduce((acc, item) => acc + (item.quantidade * item.sessao.valorIngresso), 0);
 
   return (
@@ -100,7 +103,7 @@ export default function Cart() {
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-4">
           {reserva.itens.map((item: ItemReserva, i: number) => (
-            <Card key={i} className="p-5 flex flex-col sm:flex-row gap-5 items-start sm:items-center group hover:border-slate-600 transition-colors">
+            <Card key={i} className="p-5 flex flex-col sm:flex-row gap-5 items-start sm:items-center group hover:border-slate-600 transition-colors relative">
               <div className="w-16 h-20 bg-slate-700 rounded-lg flex items-center justify-center shrink-0 shadow-inner">
                 <Film className="text-slate-500" size={32}/>
               </div>
@@ -131,11 +134,21 @@ export default function Cart() {
                 </div>
               </div>
 
-              <div className="text-right self-end sm:self-center">
-                <div className="text-slate-500 text-xs mb-1">Unitário: R$ {item.sessao.valorIngresso.toFixed(2)}</div>
-                <div className="font-bold text-white text-xl">
-                  R$ {(item.quantidade * item.sessao.valorIngresso).toFixed(2)}
+              <div className="text-right self-end sm:self-center flex flex-col gap-2 items-end">
+                <div>
+                    <div className="text-slate-500 text-xs mb-1">Unitário: R$ {item.sessao.valorIngresso.toFixed(2)}</div>
+                    <div className="font-bold text-white text-xl">
+                    R$ {(item.quantidade * item.sessao.valorIngresso).toFixed(2)}
+                    </div>
                 </div>
+                
+                <Button 
+                    variant="ghost" 
+                    onClick={() => handleEdit(item.sessao.filme.id)}
+                    className="text-xs h-8 px-3 bg-slate-800 hover:bg-cyan-900/30 text-cyan-400 border border-slate-700"
+                >
+                    <Edit3 size={12} className="mr-1" /> Editar / Trocar
+                </Button>
               </div>
             </Card>
           ))}
@@ -161,14 +174,25 @@ export default function Cart() {
               <span className="text-emerald-400">R$ {total.toFixed(2)}</span>
             </div>
             
-            <Button 
-                onClick={handleCheckout} 
-                isLoading={loading} 
-                variant="success" 
-                className="w-full h-14 text-lg shadow-lg shadow-emerald-900/20"
-            >
-                Confirmar Compra
-            </Button>
+            <div className="space-y-3">
+                <Button 
+                    onClick={handleCheckout} 
+                    isLoading={loading} 
+                    variant="success" 
+                    className="w-full h-14 text-lg shadow-lg shadow-emerald-900/20"
+                >
+                    Confirmar Compra
+                </Button>
+
+                <Button 
+                    onClick={cancelOrder}
+                    isLoading={loading}
+                    variant="outline"
+                    className="w-full text-red-400 border-red-900/50 hover:bg-red-950/30 hover:border-red-800 hover:text-red-300"
+                >
+                    <Trash2 size={16} /> Cancelar Pedido
+                </Button>
+            </div>
 
             <p className="text-xs text-center text-slate-500 mt-4">
                 Ao confirmar, concorda com os termos de cancelamento.
