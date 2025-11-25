@@ -45,3 +45,13 @@ export interface Usuario {
   perfil: 'USER' | 'ADMIN';
   senha?: string; // Opcional no frontend
 }
+
+// Novo Tipo Cartão
+export interface Cartao {
+  id: number;
+  tipo: 'CREDITO' | 'DEBITO';
+  numero: string;
+  nomeTitular: string;
+  validade: string;
+  cvv: string;
+}

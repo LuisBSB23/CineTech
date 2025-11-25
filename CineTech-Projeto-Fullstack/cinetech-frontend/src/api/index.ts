@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Filme, Sessao, Reserva, ItemReserva } from '../types';
+import type { Filme, Sessao, Reserva, ItemReserva, Cartao } from '../types';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
@@ -17,10 +17,14 @@ export const adicionarItem = (reservaId: number, sessaoId: number, quantidade: n
 
 export const confirmarReserva = (reservaId: number) => api.post<Reserva>(`/reservas/${reservaId}/confirmar`).then(res => res.data);
 
-// NOVO: Cancelar Reserva
+// Cancelar Reserva
 export const cancelarReservaApi = (reservaId: number) => api.delete(`/reservas/${reservaId}`).then(res => res.data);
 
 export const getHistorico = (usuarioId: number) => api.get<Reserva[]>(`/reservas/usuario/${usuarioId}/historico`).then(res => res.data);
 export const getAssentosOcupados = (sessaoId: number) => api.get<string[]>(`/reservas/sessao/${sessaoId}/ocupados`).then(res => res.data);
 
 export const getReservaAberta = (usuarioId: number) => api.get<Reserva>(`/reservas/usuario/${usuarioId}/aberta`).then(res => res.data);
+
+// Cartões
+export const getCartoes = (usuarioId: number) => api.get<Cartao[]>(`/cartoes/usuario/${usuarioId}`).then(res => res.data);
+export const adicionarCartao = (dados: any) => api.post<Cartao>('/cartoes', dados).then(res => res.data);
