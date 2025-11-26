@@ -10,17 +10,17 @@ import {
   Trash2,
   AlertTriangle,
   X,
-  ShieldAlert
+  ShieldAlert,
+  Ban
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-// Componentes e Contextos
 import { TicketCard, Button } from "../components/UiComponents";
 import { CreditCardForm } from "../components/CreditCardForm";
-import { getHistorico, getCartoes, deletarCartao, deleteUser } from "../api/index";
+import { getHistorico, getCartoes, deletarCartao, deleteUser, cancelarReservaApi } from "../api/index";
 import { type Reserva, type Cartao } from "../types";
 import { useAuth } from "../context/AuthContext";
 
@@ -52,23 +52,24 @@ export default function Profile() {
   const [deletePasswordConfirm, setDeletePasswordConfirm] = useState("");
   const [loadingDelete, setLoadingDelete] = useState(false);
 
-  // Efeito Inicial e Carregamento de Histórico
   useEffect(() => {
     if (!user) {
         navigate("/login");
         return;
     }
-    
     setEditNome(user.nome);
-    
-    // Carrega histórico sempre ao montar
+    loadHistory();
+  }, [user, navigate]);
+
+  const loadHistory = () => {
+    if (!user) return;
+    setLoadingHist(true);
     getHistorico(user.id)
       .then(data => setHistorico(data))
       .catch(err => console.error("Erro ao carregar histórico", err))
       .finally(() => setLoadingHist(false));
-  }, [user, navigate]);
+  };
 
-  // Função para recarregar cartões
   const refreshCartoes = () => {
     if (user) {
         getCartoes(user.id)
@@ -77,7 +78,6 @@ export default function Profile() {
     }
   };
 
-  // Efeito para Carregar Cartões ao mudar de aba
   useEffect(() => {
     if (activeTab === 'pagamento') {
         refreshCartoes();
@@ -103,7 +103,6 @@ export default function Profile() {
     }
   };
 
-  // Lógica de exclusão de Cartão (Inicia Modal)
   const confirmDeleteCard = (id: number) => {
     setCardToDelete(id);
   };
@@ -126,7 +125,6 @@ export default function Profile() {
       setShowAddCard(true);
   };
 
-  // Lógica de Exclusão de Conta
   const handleDeleteAccount = async () => {
     if (!user) return;
     setLoadingDelete(true);
@@ -143,6 +141,20 @@ export default function Profile() {
       setShowDeleteAccountModal(false);
       setDeletePasswordConfirm("");
     }
+  };
+
+  // NOVO: Função para cancelar compra no histórico
+  const handleCancelPurchase = async (reservaId: number) => {
+      if(!confirm("Tem certeza que deseja cancelar esta compra? Os assentos serão liberados.")) return;
+      
+      const toastId = toast.loading("Cancelando...");
+      try {
+          await cancelarReservaApi(reservaId);
+          toast.success("Compra cancelada e assentos devolvidos.", { id: toastId });
+          loadHistory(); // Recarrega a lista
+      } catch(e) {
+          toast.error("Erro ao cancelar compra.", { id: toastId });
+      }
   };
 
   if (!user) return null;
@@ -248,24 +260,38 @@ export default function Profile() {
                         <p>Nenhuma compra realizada ainda.</p>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                     {historico.map((reserva, idx) => (
-                        reserva.itens.map((item, itemIdx) => (
-                        <motion.div
-                            key={`${reserva.id}-${item.id}`}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: (idx + itemIdx) * 0.1 }}
-                        >
-                            <TicketCard 
-                            id={reserva.id}
-                            title={item.sessao.filme.titulo}
-                            date={new Date(item.sessao.dataHora).toLocaleString()}
-                            seats={item.selectedSeats && item.selectedSeats.length > 0 ? item.selectedSeats : [`${item.quantidade}x`]}
-                            total={item.quantidade * item.sessao.valorIngresso}
-                            />
-                        </motion.div>
-                        ))
+                        <div key={reserva.id} className="relative">
+                            {/* Agrupamento visual por Reserva se houver múltiplos itens */}
+                            {reserva.itens.map((item, itemIdx) => (
+                                <motion.div
+                                    key={`${reserva.id}-${item.id}`}
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: (idx + itemIdx) * 0.1 }}
+                                    className="mb-2"
+                                >
+                                    <TicketCard 
+                                        id={reserva.id}
+                                        title={item.sessao.filme.titulo}
+                                        date={new Date(item.sessao.dataHora).toLocaleString()}
+                                        seats={item.selectedSeats && item.selectedSeats.length > 0 ? item.selectedSeats : [`${item.quantidade}x`]}
+                                        total={item.quantidade * item.sessao.valorIngresso}
+                                    />
+                                </motion.div>
+                            ))}
+                            {/* Botão de Cancelamento para a Reserva */}
+                            <div className="flex justify-end mt-2 border-b border-slate-800 pb-6 mb-4">
+                                <Button 
+                                    onClick={() => handleCancelPurchase(reserva.id)}
+                                    variant="outline"
+                                    className="text-xs text-red-400 border-red-900 hover:bg-red-950/50 hover:border-red-500 h-8"
+                                >
+                                    <Ban size={14} /> Cancelar Compra
+                                </Button>
+                            </div>
+                        </div>
                     ))}
                     </div>
                 )}
@@ -303,7 +329,6 @@ export default function Profile() {
                                     animate={{ opacity: 1, y: 0 }}
                                     className="flex items-center gap-4 p-4 bg-slate-800/40 rounded-xl border border-slate-700 hover:border-slate-600 hover:bg-slate-800/60 transition-all group"
                                 >
-                                    {/* Ícone do Cartão */}
                                     <div className="w-12 h-8 bg-gradient-to-br from-slate-600 to-slate-800 rounded flex items-center justify-center text-[10px] font-bold text-white/30 shadow-inner border border-white/5">
                                         {c.tipo === 'CREDITO' ? 'CRED' : 'DEB'}
                                     </div>
@@ -326,7 +351,6 @@ export default function Profile() {
                                             <p className="text-sm text-slate-300 font-mono">{c.validade}</p>
                                         </div>
                                         
-                                        {/* Botões de Ação */}
                                         <button 
                                             onClick={() => handleEditCartao(c)}
                                             className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-700/50 rounded-lg transition-colors"
@@ -383,7 +407,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* MODAL DE EXCLUSÃO DE CARTÃO (BONITO) */}
+      {/* MODAL DE EXCLUSÃO DE CARTÃO */}
       <AnimatePresence>
         {cardToDelete && (
             <motion.div 
@@ -417,7 +441,7 @@ export default function Profile() {
         )}
       </AnimatePresence>
 
-      {/* MODAL DE EXCLUSÃO DE CONTA (COM SENHA) */}
+      {/* MODAL DE EXCLUSÃO DE CONTA */}
       <AnimatePresence>
         {showDeleteAccountModal && (
             <motion.div 

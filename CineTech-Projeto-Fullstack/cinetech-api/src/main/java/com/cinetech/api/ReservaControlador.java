@@ -51,6 +51,30 @@ public class ReservaControlador {
         }
     }
 
+    @PutMapping("/item/{itemId}")
+    public ResponseEntity<?> atualizarItem(@PathVariable @NonNull Long itemId, @RequestBody @Valid AdicionarItemRequest request) {
+        try {
+            ItemReserva item = reservaServico.atualizarItemReserva(itemId, request.getQuantidade(), request.getAssentos());
+            return ResponseEntity.ok(item);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/item/{itemId}")
+    public ResponseEntity<?> removerItem(@PathVariable @NonNull Long itemId) {
+        try {
+            reservaServico.removerItem(itemId);
+            return ResponseEntity.noContent().build();
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @PostMapping("/{id}/confirmar")
     @SuppressWarnings("null")
     public ResponseEntity<?> confirmarReserva(@PathVariable @NonNull Long id) {
@@ -58,14 +82,12 @@ public class ReservaControlador {
             Reserva reservaConfirmada = reservaServico.confirmarReserva(id);
             return ResponseEntity.ok(reservaConfirmada); 
         } catch (AssentosEsgotadosExcecao e) {
-            // Retorna 409 Conflict para erro de assentos já ocupados
             return ResponseEntity.status(409).body(e.getMessage()); 
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Erro interno no servidor: " + e.getMessage());
         }
     }
 
-    // NOVO ENDPOINT: Cancelar Reserva (Excluir Pedido do Carrinho)
     @DeleteMapping("/{id}")
     public ResponseEntity<?> cancelarReserva(@PathVariable @NonNull Long id) {
         try {

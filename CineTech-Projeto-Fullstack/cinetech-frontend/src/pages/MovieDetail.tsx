@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Calendar, Clock, ChevronLeft, Info, MapPin, Ban } from "lucide-react";
+import { Calendar, Clock, ChevronLeft, Info, MapPin, Ban, Tag } from "lucide-react"; // Tag icon added
 import { motion, AnimatePresence } from "framer-motion";
 import { getFilmes, getSessoes } from "../api/index";
 import type { Filme, Sessao } from "../types/index";
@@ -97,11 +97,19 @@ export default function MovieDetail() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">{filme.titulo}</h1>
-            <div className="flex flex-wrap gap-3 text-sm text-slate-400 mb-4">
-              <span className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded border border-slate-800">
-                <Clock size={14} className="text-cyan-500"/> {filme.duracaoMinutos} min
-              </span>
+            
+            {/* MODIFICADO: Exibição de Gêneros */}
+            <div className="flex flex-wrap gap-2 mb-4">
+                <span className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded border border-slate-800 text-xs text-slate-400">
+                    <Clock size={12} className="text-cyan-500"/> {filme.duracaoMinutos} min
+                </span>
+                {filme.generos && filme.generos.split(',').map((g, idx) => (
+                    <span key={idx} className="flex items-center gap-1 bg-cyan-900/20 px-2 py-1 rounded border border-cyan-900/50 text-xs text-cyan-400">
+                        <Tag size={12} /> {g.trim()}
+                    </span>
+                ))}
             </div>
+
             <p className="text-slate-400 leading-relaxed text-sm">{filme.sinopse}</p>
           </div>
         </div>

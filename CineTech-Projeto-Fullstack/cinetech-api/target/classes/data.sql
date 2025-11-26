@@ -1,13 +1,10 @@
 /**
  * Script SQL para popular o banco de dados H2/MySQL ao iniciar.
- * Atualizado com senha e perfil.
+ * Atualizado com GÊNEROS.
  */
 
--- 1. Cadastrar Usuários (Senha padrão '123456')
--- Admin
+-- 1. Cadastrar Usuários
 INSERT INTO TB_USUARIO (nome, email, senha, perfil) VALUES ('Admin CineTech', 'admin@cinetech.com', 'admin123', 'ADMIN');
-
--- Usuários Comuns
 INSERT INTO TB_USUARIO (nome, email, senha, perfil) VALUES ('Ana Silva', 'ana@email.com', '123456', 'USER');
 INSERT INTO TB_USUARIO (nome, email, senha, perfil) VALUES ('Carlos Souza', 'carlos@email.com', '123456', 'USER');
 
@@ -16,89 +13,101 @@ INSERT INTO TB_SALA (nome, capacidade_total) VALUES ('Sala 1 - IMAX', 80);
 INSERT INTO TB_SALA (nome, capacidade_total) VALUES ('Sala 2 - VIP', 80);
 INSERT INTO TB_SALA (nome, capacidade_total) VALUES ('Sala 3 - Padrão', 80);
 
--- 3. Cadastrar Filmes
-INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
+-- 3. Cadastrar Filmes (Com Gêneros)
+INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url, generos) VALUES (
     'A Origem', 
     'Dom Cobb é um ladrão habilidoso, o melhor na perigosa arte da extração, roubando segredos valiosos do fundo do subconsciente durante o estado de sonho.', 
     148,
-    'https://image.tmdb.org/t/p/w780/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg'
+    'https://image.tmdb.org/t/p/w780/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg',
+    'Ficção Científica, Ação'
 );
 
-INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
+INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url, generos) VALUES (
     'Duna: Parte Dois', 
     'Paul Atreides se une a Chani e aos Fremen enquanto busca vingança contra os conspiradores que destruíram sua família.', 
     166,
-    'https://image.tmdb.org/t/p/w780/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg'
+    'https://image.tmdb.org/t/p/w780/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg',
+    'Ficção Científica, Aventura'
 );
 
-INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
+INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url, generos) VALUES (
     'Interestelar', 
     'Um grupo de astronautas recebe a missão de verificar possíveis planetas para receberem a população mundial.', 
     169,
-    'https://images.justwatch.com/poster/312160153/s718/interestelar.jpg'
+    'https://images.justwatch.com/poster/312160153/s718/interestelar.jpg',
+    'Ficção Científica, Drama'
 );
 
-INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
+INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url, generos) VALUES (
     'Batman', 
     'Bruce Wayne atua como o vigilante de Gotham City há dois anos e isso o leva às sombras da cidade.', 
     176,
-    'https://br.web.img3.acsta.net/pictures/22/03/02/19/26/3666027.jpg'
+    'https://br.web.img3.acsta.net/pictures/22/03/02/19/26/3666027.jpg',
+    'Ação, Crime, Drama'
 );
 
-INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
+INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url, generos) VALUES (
     'Avatar: O Caminho da Água', 
     'Jake Sully vive com sua nova família no planeta Pandora. Uma ameaça familiar retorna para acabar com o que foi iniciado anteriormente.', 
     192,
-    'https://upload.wikimedia.org/wikipedia/pt/5/54/Avatar_The_Way_of_Water_poster.jpg'
+    'https://upload.wikimedia.org/wikipedia/pt/5/54/Avatar_The_Way_of_Water_poster.jpg',
+    'Ficção Científica, Aventura'
 );
 
-INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
+INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url, generos) VALUES (
     'Oppenheimer', 
     'A história do físico americano J. Robert Oppenheimer e seu papel no desenvolvimento da bomba atômica.', 
     180,
-    'https://image.tmdb.org/t/p/w780/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg'
+    'https://image.tmdb.org/t/p/w780/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
+    'Biografia, Drama, Histórico'
 );
 
-INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
+INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url, generos) VALUES (
     'Homem-Aranha: Através do Aranhaverso', 
     'Miles Morales é catapultado através do Multiverso, onde ele encontra uma equipe de Pessoas-Aranha encarregada de proteger a própria existência.', 
     140,
-    'https://image.tmdb.org/t/p/w780/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg'
+    'https://image.tmdb.org/t/p/w780/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg',
+    'Animação, Ação, Aventura'
 );
 
-INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
+INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url, generos) VALUES (
     'Matrix', 
     'Um hacker aprende com rebeldes misteriosos sobre a verdadeira natureza de sua realidade e seu papel na guerra contra seus controladores.', 
     136,
-    'https://br.web.img2.acsta.net/medias/nmedia/18/91/08/82/20128877.JPG'
+    'https://br.web.img2.acsta.net/medias/nmedia/18/91/08/82/20128877.JPG',
+    'Ficção Científica, Ação'
 );
 
-INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
+INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url, generos) VALUES (
     'Vingadores: Ultimato', 
     'Após os eventos devastadores de Guerra Infinita, o universo está em ruínas. Com a ajuda dos aliados restantes, os Vingadores se reúnem.', 
     181,
-    'https://image.tmdb.org/t/p/w780/q6725aR8Zs4IwGMXzZT8aC8lh41.jpg'
+    'https://image.tmdb.org/t/p/w780/q6725aR8Zs4IwGMXzZT8aC8lh41.jpg',
+    'Ação, Aventura, Ficção Científica'
 );
 
-INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
+INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url, generos) VALUES (
     'Top Gun: Maverick', 
     'Depois de mais de 30 anos de serviço como um dos principais aviadores da Marinha, Pete "Maverick" Mitchell está de volta.', 
     131,
-    'https://upload.wikimedia.org/wikipedia/pt/d/d2/Top_Gun_Maverick.jpg'
+    'https://upload.wikimedia.org/wikipedia/pt/d/d2/Top_Gun_Maverick.jpg',
+    'Ação, Drama'
 );
 
-INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
+INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url, generos) VALUES (
     'O Senhor dos Anéis: O Retorno do Rei', 
     'Aragorn é revelado como o herdeiro dos antigos reis enquanto Gandalf e os outros membros da sociedade quebrada lutam para salvar Gondor.', 
     201,
-    'https://image.tmdb.org/t/p/w780/rCzpDGLbOoPwLjy3OAm5NUPOTrC.jpg'
+    'https://image.tmdb.org/t/p/w780/rCzpDGLbOoPwLjy3OAm5NUPOTrC.jpg',
+    'Aventura, Fantasia, Ação'
 );
 
-INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url) VALUES (
+INSERT INTO TB_FILME (titulo, sinopse, duracao_minutos, imagem_url, generos) VALUES (
     'Pulp Fiction: Tempo de Violência', 
     'As vidas de dois assassinos da máfia, um boxeador, um gângster e sua esposa, e um par de bandidos se entrelaçam em quatro histórias de violência e redenção.', 
     154,
-    'https://image.tmdb.org/t/p/w780/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg'
+    'https://image.tmdb.org/t/p/w780/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg',
+    'Crime, Drama'
 );
 
 -- 4. Cadastrar Sessões

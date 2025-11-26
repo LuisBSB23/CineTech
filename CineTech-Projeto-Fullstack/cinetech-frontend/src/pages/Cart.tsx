@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShoppingCart, CheckCircle, Film, AlertCircle, Ticket, Trash2, Edit3, CreditCard } from "lucide-react"; 
+import { ShoppingCart, CheckCircle, Film, AlertCircle, Ticket, Trash2, Edit3, CreditCard, X } from "lucide-react"; 
 import { useCart } from "../context/CartContext";
-import { useAuth } from "../context/AuthContext"; // Importação do Auth
+import { useAuth } from "../context/AuthContext";
 import { Card, Button } from "../components/UiComponents";
 import { type ItemReserva, type Cartao } from "../types/index";
-import { getCartoes } from "../api"; // Importação API
+import { getCartoes, atualizarItem, removerItem, getReservaAberta } from "../api"; 
+import { toast } from "react-hot-toast";
 
 export default function Cart() {
   const { reserva, checkout, clearCart, cancelOrder, error, loading, setError } = useCart();
-  const { user } = useAuth(); // Pegar usuário
+  const { user } = useAuth();
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
@@ -17,8 +18,13 @@ export default function Cart() {
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
   const [loadingCartoes, setLoadingCartoes] = useState(false);
+  const [localReserva, setLocalReserva] = useState(reserva);
 
-  // Carregar cartões ao montar
+  // Sincronizar estado local com contexto
+  useEffect(() => {
+    setLocalReserva(reserva);
+  }, [reserva]);
+
   useEffect(() => {
     if (user) {
         setLoadingCartoes(true);
@@ -26,7 +32,7 @@ export default function Cart() {
             .then(data => {
                 setCartoes(data);
                 if (data.length > 0) {
-                    setSelectedCardId(data[0].id); // Seleciona o primeiro por padrão
+                    setSelectedCardId(data[0].id);
                 }
             })
             .catch(() => console.error("Erro ao buscar cartões"))
@@ -50,8 +56,56 @@ export default function Cart() {
     navigate('/');
   };
 
-  const handleEdit = (filmeId: number) => {
+  const handleEdit = (e: React.MouseEvent, filmeId: number) => {
+      e.stopPropagation(); // Impede clique no card
       navigate(`/filme/${filmeId}`);
+  };
+
+  // Lógica para remover assento individual
+  const handleRemoveSeat = async (e: React.MouseEvent, item: ItemReserva, seatToRemove: string) => {
+    e.stopPropagation(); // CORREÇÃO: Impede que o clique no 'X' abra o filme ou propague eventos
+    e.preventDefault();
+
+    const newSeats = item.selectedSeats ? item.selectedSeats.filter(s => s !== seatToRemove) : [];
+    const newQuantity = newSeats.length;
+
+    const toastId = toast.loading("Atualizando...");
+
+    try {
+        if (newQuantity === 0) {
+            await removerItem(item.id);
+            toast.success("Item removido do carrinho.", { id: toastId });
+        } else {
+            await atualizarItem(item.id, item.sessao.id, newQuantity, newSeats);
+            toast.success(`Assento ${seatToRemove} removido.`, { id: toastId });
+        }
+        
+        // Recarregar o carrinho manualmente para refletir na hora
+        if (user) {
+            const updated = await getReservaAberta(user.id);
+            // Forçar atualização no estado local ou contexto
+            if (updated) {
+               // Pequeno hack para recarregar página e garantir sincronia, 
+               // idealmente usaria uma função refreshCart() do contexto
+               window.location.reload(); 
+            }
+        }
+    } catch (e) {
+        toast.error("Erro ao atualizar item.", { id: toastId });
+    }
+  };
+
+  // Lógica para excluir item inteiro
+  const handleDeleteItem = async (e: React.MouseEvent, itemId: number) => {
+      e.stopPropagation(); // CORREÇÃO: Impede conflitos de clique
+      const toastId = toast.loading("Removendo item...");
+      try {
+          await removerItem(itemId);
+          toast.success("Item removido.", { id: toastId });
+          window.location.reload();
+      } catch (e) {
+          toast.error("Erro ao remover item.", { id: toastId });
+      }
   };
 
   if (success) {
@@ -64,41 +118,13 @@ export default function Cart() {
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">Sucesso!</h2>
           <p className="text-slate-400 mb-6">Sua reserva foi confirmada. Bom filme!</p>
-          
-          {reserva && (
-            <div className="bg-slate-900/50 rounded-xl p-4 mb-6 text-left max-h-60 overflow-y-auto custom-scrollbar border border-slate-700/50">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Seus Ingressos</h4>
-              <div className="space-y-3">
-                {reserva.itens.map((item: ItemReserva, idx: number) => (
-                  <div key={idx} className="flex justify-between items-start border-b border-slate-700/50 last:border-0 pb-2 last:pb-0">
-                    <div>
-                      <p className="text-white font-medium text-sm">{item.sessao.filme.titulo}</p>
-                      <p className="text-xs text-slate-400">
-                         {new Date(item.sessao.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} • {item.sessao.sala.nome}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                       {item.selectedSeats && item.selectedSeats.length > 0 ? (
-                          <span className="text-cyan-400 font-mono text-xs font-bold bg-cyan-950/30 px-2 py-1 rounded border border-cyan-500/20 block mt-1">
-                            Assentos: {item.selectedSeats.join(', ')}
-                          </span>
-                       ) : (
-                          <span className="text-slate-500 text-xs">{item.quantidade}x</span>
-                       )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           <Button onClick={finish} variant="success" className="w-full">Voltar ao Início</Button>
         </div>
       </div>
     );
   }
 
-  if (!reserva || reserva.itens.length === 0) {
+  if (!localReserva || localReserva.itens.length === 0) {
     return (
       <div className="text-center py-20">
         <div className="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-600">
@@ -111,7 +137,7 @@ export default function Cart() {
     );
   }
 
-  const total = reserva.valorTotal ?? reserva.itens.reduce((acc, item) => acc + (item.quantidade * item.sessao.valorIngresso), 0);
+  const total = localReserva.itens.reduce((acc, item) => acc + (item.quantidade * item.sessao.valorIngresso), 0);
 
   return (
     <div className="max-w-4xl mx-auto px-4 animate-fade-in pb-20">
@@ -129,53 +155,76 @@ export default function Cart() {
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-4">
-          {reserva.itens.map((item: ItemReserva, i: number) => (
-            <Card key={i} className="p-5 flex flex-col sm:flex-row gap-5 items-start sm:items-center group hover:border-slate-600 transition-colors relative">
-              <div className="w-16 h-20 bg-slate-700 rounded-lg flex items-center justify-center shrink-0 shadow-inner">
-                <Film className="text-slate-500" size={32}/>
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <h3 className="text-white font-bold text-lg truncate">{item.sessao.filme.titulo}</h3>
-                <div className="flex flex-wrap gap-3 text-sm mt-1">
-                    <p className="text-slate-400 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
-                        {new Date(item.sessao.dataHora).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
-                    </p>
-                    <p className="text-slate-400 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                        {item.sessao.sala.nome}
-                    </p>
-                </div>
-                
-                <div className="mt-3 flex items-center gap-2">
-                    <Ticket size={16} className="text-cyan-500" />
-                    <span className="text-slate-300 text-sm">
-                        {item.quantidade}x Ingressos 
-                        {item.selectedSeats && item.selectedSeats.length > 0 && (
-                            <span className="ml-2 font-mono text-xs bg-slate-800 px-2 py-1 rounded text-cyan-300 border border-slate-700">
-                                {item.selectedSeats.join(', ')}
-                            </span>
-                        )}
-                    </span>
-                </div>
-              </div>
+          {localReserva.itens.map((item: ItemReserva, i: number) => (
+            <Card key={i} className="p-5 flex flex-col gap-4 group hover:border-slate-600 transition-colors relative">
+              <div className="flex flex-col sm:flex-row gap-5 items-start sm:items-center">
+                  <div className="w-16 h-20 bg-slate-700 rounded-lg flex items-center justify-center shrink-0 shadow-inner">
+                    <Film className="text-slate-500" size={32}/>
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-bold text-lg truncate">{item.sessao.filme.titulo}</h3>
+                    <div className="flex flex-wrap gap-3 text-sm mt-1">
+                        <p className="text-slate-400 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+                            {new Date(item.sessao.dataHora).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                        </p>
+                        <p className="text-slate-400 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                            {item.sessao.sala.nome}
+                        </p>
+                    </div>
+                  </div>
 
-              <div className="text-right self-end sm:self-center flex flex-col gap-2 items-end">
-                <div>
+                  <div className="text-right self-end sm:self-center">
                     <div className="text-slate-500 text-xs mb-1">Unitário: R$ {item.sessao.valorIngresso.toFixed(2)}</div>
                     <div className="font-bold text-white text-xl">
-                    R$ {(item.quantidade * item.sessao.valorIngresso).toFixed(2)}
+                        R$ {(item.quantidade * item.sessao.valorIngresso).toFixed(2)}
                     </div>
-                </div>
+                  </div>
+              </div>
                 
-                <Button 
-                    variant="ghost" 
-                    onClick={() => handleEdit(item.sessao.filme.id)}
-                    className="text-xs h-8 px-3 bg-slate-800 hover:bg-cyan-900/30 text-cyan-400 border border-slate-700"
-                >
-                    <Edit3 size={12} className="mr-1" /> Editar / Trocar
-                </Button>
+              {/* Área de Assentos e Ações */}
+              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-800">
+                    <div className="flex items-center gap-2 mr-auto">
+                        <Ticket size={16} className="text-cyan-500" />
+                        <span className="text-slate-300 text-sm font-medium">Assentos:</span>
+                        <div className="flex flex-wrap gap-2">
+                            {item.selectedSeats && item.selectedSeats.map(seat => (
+                                <button 
+                                    key={seat} 
+                                    // Evento onClick corrigido aqui
+                                    onClick={(e) => handleRemoveSeat(e, item, seat)}
+                                    className="group/seat font-mono text-xs bg-slate-800 px-2 py-1 rounded text-cyan-300 border border-slate-700 flex items-center gap-1 hover:border-red-500/50 hover:bg-red-900/20 transition-colors cursor-pointer"
+                                    title="Remover este assento"
+                                >
+                                    {seat}
+                                    <X size={10} className="opacity-0 group-hover/seat:opacity-100 text-red-400" />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <Button 
+                            variant="ghost" 
+                            // Evento onClick corrigido aqui
+                            onClick={(e) => handleEdit(e, item.sessao.filme.id)}
+                            className="text-xs h-8 px-3 bg-slate-800 hover:bg-cyan-900/30 text-cyan-400 border border-slate-700"
+                        >
+                            <Edit3 size={12} className="mr-1" /> Editar / Trocar
+                        </Button>
+                        {/* Botão de Excluir Item */}
+                        <Button 
+                            variant="ghost"
+                            // Evento onClick corrigido aqui
+                            onClick={(e) => handleDeleteItem(e, item.id)}
+                            className="text-xs h-8 w-8 p-0 bg-slate-800 hover:bg-red-900/30 text-red-400 border border-slate-700"
+                            title="Excluir Filme do Carrinho"
+                        >
+                            <Trash2 size={14} />
+                        </Button>
+                    </div>
               </div>
             </Card>
           ))}
@@ -189,10 +238,6 @@ export default function Cart() {
                 <div className="flex justify-between text-slate-400 text-sm">
                     <span>Subtotal</span>
                     <span>R$ {total.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-slate-400 text-sm">
-                    <span>Taxa de Serviço</span>
-                    <span>R$ 0.00</span>
                 </div>
             </div>
 
@@ -226,7 +271,6 @@ export default function Cart() {
                                 </div>
                                 <div className="flex-1">
                                     <p className="text-xs font-medium text-white">•••• {c.numero.slice(-4)}</p>
-                                    <p className="text-[10px] text-slate-500 uppercase">{c.nomeTitular}</p>
                                 </div>
                                 {selectedCardId === c.id && <div className="w-2 h-2 rounded-full bg-cyan-500 shadow-lg shadow-cyan-500/50" />}
                             </button>
@@ -259,13 +303,9 @@ export default function Cart() {
                     variant="outline"
                     className="w-full text-red-400 border-red-900/50 hover:bg-red-950/30 hover:border-red-800 hover:text-red-300"
                 >
-                    <Trash2 size={16} /> Cancelar Pedido
+                    <Trash2 size={16} /> Esvaziar Carrinho
                 </Button>
             </div>
-
-            <p className="text-xs text-center text-slate-500 mt-4">
-                Ao confirmar, concorda com os termos de cancelamento.
-            </p>
           </Card>
         </div>
       </div>

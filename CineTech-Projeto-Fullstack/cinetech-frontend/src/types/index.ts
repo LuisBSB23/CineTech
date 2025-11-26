@@ -4,6 +4,7 @@ export interface Filme {
   sinopse: string;
   duracaoMinutos: number;
   imagemUrl: string;
+  generos: string; // Novo campo
 }
 
 export interface Sala {
@@ -37,16 +38,14 @@ export interface Reserva {
   itens: ItemReserva[];
 }
 
-// Novo Tipo Usuário
 export interface Usuario {
   id: number;
   nome: string;
   email: string;
   perfil: 'USER' | 'ADMIN';
-  senha?: string; // Opcional no frontend
+  senha?: string; 
 }
 
-// Novo Tipo Cartão
 export interface Cartao {
   id: number;
   tipo: 'CREDITO' | 'DEBITO';

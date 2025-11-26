@@ -15,9 +15,15 @@ export const criarReserva = (usuarioId: number) => api.post<Reserva>('/reservas'
 export const adicionarItem = (reservaId: number, sessaoId: number, quantidade: number, assentos: string[]) => 
   api.put<ItemReserva>(`/reservas/${reservaId}/item`, { sessaoId, quantidade, assentos }).then(res => res.data);
 
+// NOVO: Atualizar Item (Remover assento específico)
+export const atualizarItem = (itemId: number, sessaoId: number, quantidade: number, assentos: string[]) => 
+  api.put<ItemReserva>(`/reservas/item/${itemId}`, { sessaoId, quantidade, assentos }).then(res => res.data);
+
+// NOVO: Remover Item
+export const removerItem = (itemId: number) => api.delete(`/reservas/item/${itemId}`).then(res => res.data);
+
 export const confirmarReserva = (reservaId: number) => api.post<Reserva>(`/reservas/${reservaId}/confirmar`).then(res => res.data);
 
-// Cancelar Reserva
 export const cancelarReservaApi = (reservaId: number) => api.delete(`/reservas/${reservaId}`).then(res => res.data);
 
 export const getHistorico = (usuarioId: number) => api.get<Reserva[]>(`/reservas/usuario/${usuarioId}/historico`).then(res => res.data);
@@ -25,11 +31,9 @@ export const getAssentosOcupados = (sessaoId: number) => api.get<string[]>(`/res
 
 export const getReservaAberta = (usuarioId: number) => api.get<Reserva>(`/reservas/usuario/${usuarioId}/aberta`).then(res => res.data);
 
-// Cartões
 export const getCartoes = (usuarioId: number) => api.get<Cartao[]>(`/cartoes/usuario/${usuarioId}`).then(res => res.data);
 export const adicionarCartao = (dados: any) => api.post<Cartao>('/cartoes', dados).then(res => res.data);
 export const atualizarCartao = (id: number, dados: any) => api.put<Cartao>(`/cartoes/${id}`, dados).then(res => res.data);
 export const deletarCartao = (id: number) => api.delete(`/cartoes/${id}`).then(res => res.data);
 
-// Usuário
 export const deleteUser = (id: number, senha: string) => api.delete(`/auth/usuario/${id}`, { data: { senha } }).then(res => res.data);

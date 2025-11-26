@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects; // Importação necessária para a correção da imagem
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -85,15 +85,19 @@ public class ReservaServico {
             itemParaSalvar = itemExistenteOpt.get();
             itemParaSalvar.setQuantidade(itemParaSalvar.getQuantidade() + quantidade);
             
-            // Lógica de concatenação para não perder assentos anteriores
             if (!novosAssentosStr.isEmpty()) {
                 String assentosAntigos = itemParaSalvar.getAssentos();
                 if (assentosAntigos != null && !assentosAntigos.isEmpty()) {
-                    if (!novosAssentosStr.contains(assentosAntigos)) {
-                         itemParaSalvar.setAssentos(assentosAntigos + "," + novosAssentosStr);
-                    } else {
-                         itemParaSalvar.setAssentos(novosAssentosStr);
+                    // Evita duplicar assentos se já existirem na string
+                    List<String> listaAntiga = new ArrayList<>(Arrays.asList(assentosAntigos.split(",")));
+                    List<String> listaNova = Arrays.asList(novosAssentosStr.split(","));
+                    
+                    for(String s : listaNova) {
+                        if(!listaAntiga.contains(s)) {
+                            listaAntiga.add(s);
+                        }
                     }
+                    itemParaSalvar.setAssentos(String.join(",", listaAntiga));
                 } else {
                     itemParaSalvar.setAssentos(novosAssentosStr);
                 }
@@ -109,6 +113,37 @@ public class ReservaServico {
         return itemReservaRepositorio.save(itemParaSalvar);
     }
 
+    @Transactional
+    public ItemReserva atualizarItemReserva(@NonNull Long itemId, int novaQuantidade, List<String> novosAssentos) {
+        ItemReserva item = itemReservaRepositorio.findById(itemId)
+                .orElseThrow(() -> new EntityNotFoundException("Item não encontrado"));
+
+        if (item.getReserva().getStatus() != StatusReserva.ABERTO) {
+            throw new IllegalStateException("Só é possível modificar itens de reservas abertas.");
+        }
+
+        if (novaQuantidade <= 0) {
+            itemReservaRepositorio.delete(item);
+            return null;
+        }
+
+        item.setQuantidade(novaQuantidade);
+        item.setAssentos((novosAssentos != null && !novosAssentos.isEmpty()) ? String.join(",", novosAssentos) : "");
+        
+        return itemReservaRepositorio.save(item);
+    }
+
+    @Transactional
+    public void removerItem(@NonNull Long itemId) {
+        ItemReserva item = itemReservaRepositorio.findById(itemId)
+                .orElseThrow(() -> new EntityNotFoundException("Item não encontrado"));
+        
+        if (item.getReserva().getStatus() != StatusReserva.ABERTO) {
+            throw new IllegalStateException("Só é possível remover itens de reservas abertas.");
+        }
+        itemReservaRepositorio.delete(item);
+    }
+
     @Transactional(noRollbackFor = AssentosEsgotadosExcecao.class)
     public Reserva confirmarReserva(@NonNull Long reservaId) {
         Reserva reserva = reservaRepositorio.findById(reservaId)
@@ -119,18 +154,14 @@ public class ReservaServico {
         for (ItemReserva item : itens) {
             Sessao sessao = item.getSessao();
             
-            // 1. Validação de Capacidade
             if (sessao.getAssentosDisponiveis() < item.getQuantidade()) {
                 reserva.setStatus(StatusReserva.CANCELADO);
                 reservaRepositorio.save(reserva);
                 throw new AssentosEsgotadosExcecao("Falha: Assentos esgotados para o filme '" + sessao.getFilme().getTitulo() + "'");
             }
 
-            // 2. Validação de Concorrência de Assentos
             if (item.getAssentos() != null && !item.getAssentos().isEmpty()) {
                 List<String> assentosSolicitados = Arrays.asList(item.getAssentos().split(","));
-                
-                // CORREÇÃO DA IMAGEM: Objects.requireNonNull para garantir @NonNull Long
                 List<String> assentosOcupadosNoBanco = listarAssentosOcupados(Objects.requireNonNull(sessao.getId()));
                 
                 for (String assento : assentosSolicitados) {
@@ -156,18 +187,61 @@ public class ReservaServico {
         return reservaRepositorio.save(reserva);
     }
 
+    // ATUALIZADO: Permite cancelar CONFIRMADO (devolvendo assentos) e ABERTO
     @Transactional
-    // CORREÇÃO DA IMAGEM: Adicionado @NonNull para satisfazer verificações estritas
     public void cancelarReserva(@NonNull Long reservaId) {
         Reserva reserva = reservaRepositorio.findById(reservaId)
                 .orElseThrow(() -> new EntityNotFoundException("Reserva não encontrada"));
         
         if (reserva.getStatus() == StatusReserva.ABERTO) {
+            // Se for apenas carrinho, marca como cancelado (ou deleta se preferir limpar o banco)
+            reserva.setStatus(StatusReserva.CANCELADO);
+            reservaRepositorio.save(reserva);
+        } else if (reserva.getStatus() == StatusReserva.CONFIRMADO) {
+            // Se for confirmada, precisamos DEVOLVER os assentos ao estoque
+            for (ItemReserva item : reserva.getItens()) {
+                Sessao sessao = item.getSessao();
+                // Devolve a quantidade
+                sessao.setAssentosDisponiveis(sessao.getAssentosDisponiveis() + item.getQuantidade());
+                sessaoRepositorio.save(sessao);
+            }
             reserva.setStatus(StatusReserva.CANCELADO);
             reservaRepositorio.save(reserva);
         } else {
-             throw new IllegalStateException("Não é possível cancelar esta reserva.");
+             throw new IllegalStateException("Reserva já está cancelada.");
         }
+    }
+
+    // CORRIGIDO: Lógica para evitar erro 500 na exclusão de conta
+    @Transactional
+    public void gerenciarExclusaoUsuario(@NonNull Long usuarioId) {
+        Usuario usuario = usuarioRepositorio.findById(usuarioId)
+            .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
+
+        List<Reserva> reservas = usuario.getReservas();
+        
+        // Usar uma lista separada para evitar ConcurrentModificationException
+        List<Reserva> reservasParaProcessar = new ArrayList<>(reservas);
+
+        for (Reserva r : reservasParaProcessar) {
+            if (r.getStatus() == StatusReserva.ABERTO) {
+                r.setStatus(StatusReserva.CANCELADO);
+                reservaRepositorio.save(r);
+            } else if (r.getStatus() == StatusReserva.CONFIRMADO) {
+                // Restaurar assentos antes de deletar
+                for (ItemReserva item : r.getItens()) {
+                    Sessao sessao = item.getSessao();
+                    sessao.setAssentosDisponiveis(sessao.getAssentosDisponiveis() + item.getQuantidade());
+                    sessaoRepositorio.save(sessao);
+                }
+                // Deleta a reserva (CascadeType.REMOVE cuidará dos itens)
+                reservaRepositorio.delete(r);
+            }
+        }
+        
+        // CRÍTICO: Limpar a lista do objeto usuário em memória para o Hibernate não tentar salvar referências deletadas
+        usuario.getReservas().clear();
+        usuarioRepositorio.save(usuario);
     }
 
     public List<Reserva> listarHistoricoUsuario(@NonNull Long usuarioId) {

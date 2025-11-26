@@ -2,6 +2,7 @@ package com.cinetech.api;
 
 import com.cinetech.dominio.modelo.Usuario;
 import com.cinetech.dominio.repositorio.UsuarioRepositorio;
+import com.cinetech.servico.ReservaServico; 
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
@@ -14,15 +15,16 @@ import java.util.Optional;
 public class AuthControlador {
 
     private final UsuarioRepositorio usuarioRepositorio;
+    private final ReservaServico reservaServico; 
 
-    public AuthControlador(UsuarioRepositorio usuarioRepositorio) {
+    public AuthControlador(UsuarioRepositorio usuarioRepositorio, ReservaServico reservaServico) {
         this.usuarioRepositorio = usuarioRepositorio;
+        this.reservaServico = reservaServico;
     }
 
     record LoginRequest(@NotBlank String email, @NotBlank String senha) {}
     record RegisterRequest(@NotBlank String nome, @NotBlank String email, @NotBlank String senha) {}
     record UpdateProfileRequest(@NotBlank String nome, @NotBlank String senha) {}
-    // DTO para exclusão de conta
     record DeleteAccountRequest(@NotBlank String senha) {}
 
     @PostMapping("/login")
@@ -45,7 +47,7 @@ public class AuthControlador {
         novoUsuario.setNome(request.nome);
         novoUsuario.setEmail(request.email);
         novoUsuario.setSenha(request.senha);
-        novoUsuario.setPerfil("USER"); // Padrão para novos cadastros
+        novoUsuario.setPerfil("USER");
 
         return ResponseEntity.ok(usuarioRepositorio.save(novoUsuario));
     }
@@ -61,14 +63,19 @@ public class AuthControlador {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // NOVO: Endpoint para excluir conta com verificação de senha
     @DeleteMapping("/usuario/{id}")
     public ResponseEntity<?> deletarUsuario(@PathVariable @NonNull Long id, @RequestBody DeleteAccountRequest request) {
         return usuarioRepositorio.findById(id).map(usuario -> {
             if (!usuario.getSenha().equals(request.senha)) {
                 return ResponseEntity.status(401).body("Senha incorreta.");
             }
+            
+            // 1. Limpa as dependências (reservas) antes
+            reservaServico.gerenciarExclusaoUsuario(id);
+            
+            // 2. Agora deleta o usuário com segurança
             usuarioRepositorio.delete(usuario);
+            
             return ResponseEntity.noContent().build();
         }).orElse(ResponseEntity.notFound().build());
     }
