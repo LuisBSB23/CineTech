@@ -7,9 +7,12 @@ import {
   Save, 
   Edit2, 
   Plus,
-  Trash2
+  Trash2,
+  AlertTriangle,
+  X,
+  ShieldAlert
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -17,12 +20,12 @@ import { useNavigate } from "react-router-dom";
 // Componentes e Contextos
 import { TicketCard, Button } from "../components/UiComponents";
 import { CreditCardForm } from "../components/CreditCardForm";
-import { getHistorico, getCartoes, deletarCartao } from "../api/index";
+import { getHistorico, getCartoes, deletarCartao, deleteUser } from "../api/index";
 import { type Reserva, type Cartao } from "../types";
 import { useAuth } from "../context/AuthContext";
 
 export default function Profile() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const navigate = useNavigate();
   
   // Estados do Perfil
@@ -32,7 +35,7 @@ export default function Profile() {
   const [loadingSave, setLoadingSave] = useState(false);
 
   // Estados das Abas e Dados
-  const [activeTab, setActiveTab] = useState<'ingressos' | 'pagamento'>('ingressos');
+  const [activeTab, setActiveTab] = useState<'ingressos' | 'pagamento' | 'configuracoes'>('ingressos');
   
   // Dados de Histórico
   const [historico, setHistorico] = useState<Reserva[]>([]);
@@ -42,6 +45,12 @@ export default function Profile() {
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [showAddCard, setShowAddCard] = useState(false);
   const [editingCard, setEditingCard] = useState<Cartao | null>(null);
+
+  // Estados de Modal
+  const [cardToDelete, setCardToDelete] = useState<number | null>(null);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deletePasswordConfirm, setDeletePasswordConfirm] = useState("");
+  const [loadingDelete, setLoadingDelete] = useState(false);
 
   // Efeito Inicial e Carregamento de Histórico
   useEffect(() => {
@@ -94,15 +103,21 @@ export default function Profile() {
     }
   };
 
-  const handleDeleteCartao = async (id: number) => {
-    if (confirm("Tem certeza que deseja excluir este cartão?")) {
-        try {
-            await deletarCartao(id);
-            toast.success("Cartão removido.");
-            refreshCartoes();
-        } catch (e) {
-            toast.error("Erro ao excluir cartão.");
-        }
+  // Lógica de exclusão de Cartão (Inicia Modal)
+  const confirmDeleteCard = (id: number) => {
+    setCardToDelete(id);
+  };
+
+  const handleActuallyDeleteCard = async () => {
+    if (!cardToDelete) return;
+    try {
+        await deletarCartao(cardToDelete);
+        toast.success("Cartão removido.");
+        refreshCartoes();
+    } catch (e) {
+        toast.error("Erro ao excluir cartão.");
+    } finally {
+        setCardToDelete(null);
     }
   };
 
@@ -111,10 +126,29 @@ export default function Profile() {
       setShowAddCard(true);
   };
 
+  // Lógica de Exclusão de Conta
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setLoadingDelete(true);
+    try {
+      await deleteUser(user.id, deletePasswordConfirm);
+      toast.success("Conta excluída com sucesso.");
+      logout();
+      navigate('/');
+    } catch (err: any) {
+      const msg = err.response?.status === 401 ? "Senha incorreta." : "Erro ao excluir conta.";
+      toast.error(msg);
+    } finally {
+      setLoadingDelete(false);
+      setShowDeleteAccountModal(false);
+      setDeletePasswordConfirm("");
+    }
+  };
+
   if (!user) return null;
 
   return (
-    <div className="max-w-4xl mx-auto animate-fade-in pb-20 px-4">
+    <div className="max-w-4xl mx-auto animate-fade-in pb-20 px-4 relative">
       
       {/* --- CABEÇALHO DO PERFIL --- */}
       <div className="flex flex-col md:flex-row items-center gap-6 mb-10 p-6 bg-slate-900/50 rounded-2xl border border-slate-800">
@@ -186,7 +220,14 @@ export default function Profile() {
             <CardIcon size={18} /> Pagamentos
           </button>
           
-          <button className="w-full flex items-center gap-3 p-3 rounded-lg text-slate-400 hover:bg-slate-900 hover:text-slate-200 transition-colors cursor-not-allowed opacity-60">
+          <button 
+            onClick={() => setActiveTab('configuracoes')}
+            className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                activeTab === 'configuracoes' 
+                ? 'bg-slate-800 text-cyan-400 border border-slate-700 font-medium shadow-sm' 
+                : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+            }`}
+          >
             <Settings size={18} /> Configurações
           </button>
         </div>
@@ -294,7 +335,7 @@ export default function Profile() {
                                             <Edit2 size={16} />
                                         </button>
                                         <button 
-                                            onClick={() => handleDeleteCartao(c.id)}
+                                            onClick={() => confirmDeleteCard(c.id)}
                                             className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
                                             title="Excluir"
                                         >
@@ -316,8 +357,117 @@ export default function Profile() {
             </div>
           )}
 
+          {/* ABA: CONFIGURAÇÕES */}
+          {activeTab === 'configuracoes' && (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                <h2 className="text-xl font-bold text-white border-b border-slate-800 pb-4 mb-6">Configurações da Conta</h2>
+                
+                <div className="bg-red-900/10 border border-red-900/30 rounded-xl p-6">
+                    <h3 className="text-red-400 font-bold flex items-center gap-2 mb-2">
+                        <ShieldAlert size={20} /> Zona de Perigo
+                    </h3>
+                    <p className="text-slate-400 text-sm mb-6">
+                        Ao excluir sua conta, todos os seus dados, incluindo histórico de compras e cartões salvos, serão permanentemente removidos. Esta ação não pode ser desfeita.
+                    </p>
+                    <Button 
+                        onClick={() => setShowDeleteAccountModal(true)} 
+                        variant="outline" 
+                        className="border-red-900/50 text-red-400 hover:bg-red-950/50 hover:border-red-500 hover:text-red-300"
+                    >
+                        Excluir Minha Conta
+                    </Button>
+                </div>
+            </div>
+          )}
+
         </div>
       </div>
+
+      {/* MODAL DE EXCLUSÃO DE CARTÃO (BONITO) */}
+      <AnimatePresence>
+        {cardToDelete && (
+            <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            >
+                <motion.div 
+                    initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                    className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+                >
+                    <div className="w-12 h-12 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+                        <AlertTriangle size={24} />
+                    </div>
+                    <h3 className="text-xl font-bold text-white text-center mb-2">Excluir Cartão?</h3>
+                    <p className="text-slate-400 text-center text-sm mb-6">
+                        Tem certeza que deseja remover este cartão da sua carteira?
+                    </p>
+                    <div className="flex gap-3">
+                        <Button variant="secondary" onClick={() => setCardToDelete(null)} className="flex-1">
+                            Cancelar
+                        </Button>
+                        <Button 
+                            onClick={handleActuallyDeleteCard} 
+                            className="flex-1 bg-red-600 hover:bg-red-500 text-white shadow-red-900/20"
+                        >
+                            Sim, Excluir
+                        </Button>
+                    </div>
+                </motion.div>
+            </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DE EXCLUSÃO DE CONTA (COM SENHA) */}
+      <AnimatePresence>
+        {showDeleteAccountModal && (
+            <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            >
+                <motion.div 
+                    initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                    className="bg-slate-900 border border-red-900/30 rounded-2xl p-8 max-w-md w-full shadow-2xl relative"
+                >
+                    <button 
+                        onClick={() => setShowDeleteAccountModal(false)}
+                        className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+
+                    <div className="text-center mb-6">
+                        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500 border border-red-500/20">
+                            <ShieldAlert size={32} />
+                        </div>
+                        <h3 className="text-2xl font-bold text-white">Confirmação Necessária</h3>
+                        <p className="text-slate-400 text-sm mt-2">
+                            Para sua segurança, digite sua senha para confirmar a exclusão definitiva da conta.
+                        </p>
+                    </div>
+
+                    <div className="space-y-4">
+                        <input 
+                            type="password"
+                            value={deletePasswordConfirm}
+                            onChange={(e) => setDeletePasswordConfirm(e.target.value)}
+                            placeholder="Digite sua senha atual"
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none"
+                        />
+                        
+                        <Button 
+                            onClick={handleDeleteAccount}
+                            isLoading={loadingDelete}
+                            disabled={!deletePasswordConfirm}
+                            className="w-full bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20"
+                        >
+                            Confirmar Exclusão
+                        </Button>
+                    </div>
+                </motion.div>
+            </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

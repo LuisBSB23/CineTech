@@ -22,6 +22,8 @@ public class AuthControlador {
     record LoginRequest(@NotBlank String email, @NotBlank String senha) {}
     record RegisterRequest(@NotBlank String nome, @NotBlank String email, @NotBlank String senha) {}
     record UpdateProfileRequest(@NotBlank String nome, @NotBlank String senha) {}
+    // DTO para exclusão de conta
+    record DeleteAccountRequest(@NotBlank String senha) {}
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
@@ -56,6 +58,18 @@ public class AuthControlador {
                 usuario.setSenha(request.senha);
             }
             return ResponseEntity.ok(usuarioRepositorio.save(usuario));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    // NOVO: Endpoint para excluir conta com verificação de senha
+    @DeleteMapping("/usuario/{id}")
+    public ResponseEntity<?> deletarUsuario(@PathVariable @NonNull Long id, @RequestBody DeleteAccountRequest request) {
+        return usuarioRepositorio.findById(id).map(usuario -> {
+            if (!usuario.getSenha().equals(request.senha)) {
+                return ResponseEntity.status(401).body("Senha incorreta.");
+            }
+            usuarioRepositorio.delete(usuario);
+            return ResponseEntity.noContent().build();
         }).orElse(ResponseEntity.notFound().build());
     }
 }

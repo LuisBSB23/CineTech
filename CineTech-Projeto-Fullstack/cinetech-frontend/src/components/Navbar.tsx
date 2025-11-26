@@ -37,6 +37,9 @@ export const Navbar = () => {
     navigate("/");
   };
 
+  // Lógica para esconder barra de pesquisa
+  const shouldHideSearch = location.pathname === '/perfil' || location.pathname === '/carrinho';
+
   return (
     <nav className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 transition-all">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
@@ -50,19 +53,23 @@ export const Navbar = () => {
           </span>
         </Link>
 
-        {/* Busca */}
-        <div className="flex-1 max-w-md hidden md:block">
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-500 transition-colors" size={18} />
-            <input 
-              type="text"
-              placeholder="Buscar filmes..."
-              value={searchTerm}
-              onChange={handleSearch}
-              className="w-full bg-slate-900 border border-slate-800 text-slate-200 text-sm rounded-full py-2 pl-10 pr-4 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all placeholder:text-slate-600"
-            />
+        {/* Busca - Condicional */}
+        {!shouldHideSearch && (
+          <div className="flex-1 max-w-md hidden md:block animate-in fade-in zoom-in duration-300">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-500 transition-colors" size={18} />
+              <input 
+                type="text"
+                placeholder="Buscar filmes..."
+                value={searchTerm}
+                onChange={handleSearch}
+                className="w-full bg-slate-900 border border-slate-800 text-slate-200 text-sm rounded-full py-2 pl-10 pr-4 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all placeholder:text-slate-600"
+              />
+            </div>
           </div>
-        </div>
+        )}
+        {/* Spacer se a busca estiver oculta para manter layout, se necessário, ou deixar flex space-between agir */}
+        {shouldHideSearch && <div className="flex-1 md:block hidden" />}
 
         {/* Ações / Auth */}
         <div className="flex items-center gap-3">
@@ -107,19 +114,21 @@ export const Navbar = () => {
         </div>
       </div>
       
-      {/* Busca Mobile */}
-      <div className="md:hidden px-4 pb-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-          <input 
-             type="text"
-             placeholder="Buscar filmes..."
-             value={searchTerm}
-             onChange={handleSearch}
-             className="w-full bg-slate-900 border border-slate-800 text-slate-200 text-sm rounded-lg py-2 pl-9 pr-4 focus:outline-none focus:border-cyan-500"
-          />
+      {/* Busca Mobile - Condicional */}
+      {!shouldHideSearch && (
+        <div className="md:hidden px-4 pb-3 animate-in fade-in slide-in-from-top-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+            <input 
+               type="text"
+               placeholder="Buscar filmes..."
+               value={searchTerm}
+               onChange={handleSearch}
+               className="w-full bg-slate-900 border border-slate-800 text-slate-200 text-sm rounded-lg py-2 pl-9 pr-4 focus:outline-none focus:border-cyan-500"
+            />
+          </div>
         </div>
-      </div>
+      )}
     </nav>
   );
 };

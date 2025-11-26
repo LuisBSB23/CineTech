@@ -30,3 +30,6 @@ export const getCartoes = (usuarioId: number) => api.get<Cartao[]>(`/cartoes/usu
 export const adicionarCartao = (dados: any) => api.post<Cartao>('/cartoes', dados).then(res => res.data);
 export const atualizarCartao = (id: number, dados: any) => api.put<Cartao>(`/cartoes/${id}`, dados).then(res => res.data);
 export const deletarCartao = (id: number) => api.delete(`/cartoes/${id}`).then(res => res.data);
+
+// Usuário
+export const deleteUser = (id: number, senha: string) => api.delete(`/auth/usuario/${id}`, { data: { senha } }).then(res => res.data);
