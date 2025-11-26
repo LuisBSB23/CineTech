@@ -26,16 +26,14 @@ public class Reserva {
 
     private Double valorTotal;
 
-    /**
-     * MODIFICADO: Alterado de LAZY para EAGER.
-     * Isso garante que os dados do Usuário estejam disponíveis quando o controlador
-     * tentar enviar a resposta JSON da confirmação, evitando o erro 500.
-     */
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
-    @OneToMany(mappedBy = "reserva", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    // MUDANÇA 3: Adicionado 'orphanRemoval = true'.
+    // Isso garante que quando removemos um item desta lista no Java,
+    // o Hibernate execute o DELETE na tabela TB_ITEM_RESERVA.
+    @OneToMany(mappedBy = "reserva", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     private List<ItemReserva> itens = new ArrayList<>();
     
     // Construtor padrão

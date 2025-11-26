@@ -25,11 +25,16 @@ public class Usuario {
     @Column(nullable = false)
     private String perfil;
 
-    // MODIFICADO: CascadeType.REMOVE garante que ao deletar o usuário, 
-    // o banco permita deletar as reservas associadas (após nossa lógica de limpeza).
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.REMOVE)
     @JsonIgnore
     private List<Reserva> reservas;
+
+    // MUDANÇA 2: Adicionado relacionamento com Cartao com CascadeType.ALL (inclui REMOVE).
+    // Isso permite que ao deletar o usuário, os cartões associados sejam deletados automaticamente,
+    // resolvendo o erro de integridade referencial (FK).
+    @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<Cartao> cartoes;
 
     public Usuario() {
     }
@@ -46,6 +51,9 @@ public class Usuario {
     public void setPerfil(String perfil) { this.perfil = perfil; }
     public List<Reserva> getReservas() { return reservas; }
     public void setReservas(List<Reserva> reservas) { this.reservas = reservas; }
+    
+    public List<Cartao> getCartoes() { return cartoes; }
+    public void setCartoes(List<Cartao> cartoes) { this.cartoes = cartoes; }
 
     @Override
     public boolean equals(Object o) {

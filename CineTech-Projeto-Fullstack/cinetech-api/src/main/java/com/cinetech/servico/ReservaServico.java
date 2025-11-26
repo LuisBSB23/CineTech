@@ -14,14 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections; // Importação adicionada
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-@SuppressWarnings("null") // CORREÇÃO: Suprime alertas de análise estática de nulos (como o da imagem)
+@SuppressWarnings("null")
 public class ReservaServico {
 
     private final ReservaRepositorio reservaRepositorio;
@@ -124,7 +124,8 @@ public class ReservaServico {
         }
 
         if (novaQuantidade <= 0) {
-            itemReservaRepositorio.delete(item);
+            // Usa o método removerItem para garantir consistência
+            removerItem(itemId);
             return null;
         }
 
@@ -134,16 +135,22 @@ public class ReservaServico {
         return itemReservaRepositorio.save(item);
     }
 
+    // MUDANÇA 4: Atualizada a lógica de removerItem
     @Transactional
     public void removerItem(@NonNull Long itemId) {
         ItemReserva item = itemReservaRepositorio.findById(itemId)
                 .orElseThrow(() -> new EntityNotFoundException("Item não encontrado"));
         
-        if (item.getReserva().getStatus() != StatusReserva.ABERTO) {
+        Reserva reserva = item.getReserva();
+
+        if (reserva.getStatus() != StatusReserva.ABERTO) {
             throw new IllegalStateException("Só é possível remover itens de reservas abertas.");
         }
         
-        itemReservaRepositorio.delete(item);
+        // Remove o item da lista da Reserva.
+        // Com 'orphanRemoval = true' na entidade Reserva, o JPA deletará automaticamente da tabela.
+        reserva.getItens().remove(item);
+        reservaRepositorio.save(reserva);
     }
 
     @Transactional(noRollbackFor = AssentosEsgotadosExcecao.class)
@@ -232,8 +239,6 @@ public class ReservaServico {
         Usuario usuario = usuarioRepositorio.findById(usuarioId)
             .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
         
-        // CORREÇÃO DO ERRO DA IMAGEM:
-        // Verifica se a lista é nula antes de chamar o stream()
         List<Reserva> reservas = usuario.getReservas();
         if (reservas == null) {
             return Collections.emptyList();

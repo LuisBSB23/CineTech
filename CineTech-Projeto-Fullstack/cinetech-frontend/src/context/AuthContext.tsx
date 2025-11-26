@@ -13,12 +13,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<Usuario | null>(null);
 
+  // MUDANÇA 1: Ao iniciar (montar o componente), limpa o localStorage
+  // e garante que o estado do usuário seja nulo.
   useEffect(() => {
-    // Recuperar utilizador do localStorage ao iniciar
-    const storedUser = localStorage.getItem("cinetech_user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    localStorage.removeItem("cinetech_user");
+    setUser(null);
   }, []);
 
   const login = (userData: Usuario) => {
