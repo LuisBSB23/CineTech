@@ -70,11 +70,11 @@ public class AuthControlador {
                 return ResponseEntity.status(401).body("Senha incorreta.");
             }
             
-            // 1. Limpa as dependências (reservas) antes
+            // 1. Limpa explicitamente todas as reservas e itens, devolvendo estoque
             reservaServico.gerenciarExclusaoUsuario(id);
             
-            // 2. Agora deleta o usuário com segurança
-            usuarioRepositorio.delete(usuario);
+            // 2. Agora deleta o usuário (sem dependências conflitantes)
+            usuarioRepositorio.deleteById(id);
             
             return ResponseEntity.noContent().build();
         }).orElse(ResponseEntity.notFound().build());

@@ -5,22 +5,20 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { Card, Button } from "../components/UiComponents";
 import { type ItemReserva, type Cartao } from "../types/index";
-import { getCartoes, atualizarItem, removerItem, getReservaAberta } from "../api"; 
+import { getCartoes, atualizarItem } from "../api"; 
 import { toast } from "react-hot-toast";
 
 export default function Cart() {
-  const { reserva, checkout, clearCart, cancelOrder, error, loading, setError } = useCart();
+  const { reserva, checkout, clearCart, cancelOrder, removeItem, error, loading, setError } = useCart();
   const { user } = useAuth();
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
-  // Estado para cartões
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
   const [loadingCartoes, setLoadingCartoes] = useState(false);
   const [localReserva, setLocalReserva] = useState(reserva);
 
-  // Sincronizar estado local com contexto
   useEffect(() => {
     setLocalReserva(reserva);
   }, [reserva]);
@@ -57,13 +55,12 @@ export default function Cart() {
   };
 
   const handleEdit = (e: React.MouseEvent, filmeId: number) => {
-      e.stopPropagation(); // Impede clique no card
+      e.stopPropagation(); 
       navigate(`/filme/${filmeId}`);
   };
 
-  // Lógica para remover assento individual
   const handleRemoveSeat = async (e: React.MouseEvent, item: ItemReserva, seatToRemove: string) => {
-    e.stopPropagation(); // CORREÇÃO: Impede que o clique no 'X' abra o filme ou propague eventos
+    e.stopPropagation(); 
     e.preventDefault();
 
     const newSeats = item.selectedSeats ? item.selectedSeats.filter(s => s !== seatToRemove) : [];
@@ -73,36 +70,26 @@ export default function Cart() {
 
     try {
         if (newQuantity === 0) {
-            await removerItem(item.id);
+            // A exclusão do item limpa completamente a referência de assentos no banco (TB_ITEM_RESERVA é deletada)
+            await removeItem(item.id);
             toast.success("Item removido do carrinho.", { id: toastId });
         } else {
             await atualizarItem(item.id, item.sessao.id, newQuantity, newSeats);
             toast.success(`Assento ${seatToRemove} removido.`, { id: toastId });
-        }
-        
-        // Recarregar o carrinho manualmente para refletir na hora
-        if (user) {
-            const updated = await getReservaAberta(user.id);
-            // Forçar atualização no estado local ou contexto
-            if (updated) {
-               // Pequeno hack para recarregar página e garantir sincronia, 
-               // idealmente usaria uma função refreshCart() do contexto
-               window.location.reload(); 
-            }
+            window.location.reload(); 
         }
     } catch (e) {
         toast.error("Erro ao atualizar item.", { id: toastId });
     }
   };
 
-  // Lógica para excluir item inteiro
   const handleDeleteItem = async (e: React.MouseEvent, itemId: number) => {
-      e.stopPropagation(); // CORREÇÃO: Impede conflitos de clique
+      e.stopPropagation();
       const toastId = toast.loading("Removendo item...");
       try {
-          await removerItem(itemId);
+          // Garante a remoção completa da linha no banco
+          await removeItem(itemId);
           toast.success("Item removido.", { id: toastId });
-          window.location.reload();
       } catch (e) {
           toast.error("Erro ao remover item.", { id: toastId });
       }
@@ -184,7 +171,6 @@ export default function Cart() {
                   </div>
               </div>
                 
-              {/* Área de Assentos e Ações */}
               <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-800">
                     <div className="flex items-center gap-2 mr-auto">
                         <Ticket size={16} className="text-cyan-500" />
@@ -193,7 +179,6 @@ export default function Cart() {
                             {item.selectedSeats && item.selectedSeats.map(seat => (
                                 <button 
                                     key={seat} 
-                                    // Evento onClick corrigido aqui
                                     onClick={(e) => handleRemoveSeat(e, item, seat)}
                                     className="group/seat font-mono text-xs bg-slate-800 px-2 py-1 rounded text-cyan-300 border border-slate-700 flex items-center gap-1 hover:border-red-500/50 hover:bg-red-900/20 transition-colors cursor-pointer"
                                     title="Remover este assento"
@@ -208,16 +193,13 @@ export default function Cart() {
                     <div className="flex gap-2">
                         <Button 
                             variant="ghost" 
-                            // Evento onClick corrigido aqui
                             onClick={(e) => handleEdit(e, item.sessao.filme.id)}
                             className="text-xs h-8 px-3 bg-slate-800 hover:bg-cyan-900/30 text-cyan-400 border border-slate-700"
                         >
                             <Edit3 size={12} className="mr-1" /> Editar / Trocar
                         </Button>
-                        {/* Botão de Excluir Item */}
                         <Button 
                             variant="ghost"
-                            // Evento onClick corrigido aqui
                             onClick={(e) => handleDeleteItem(e, item.id)}
                             className="text-xs h-8 w-8 p-0 bg-slate-800 hover:bg-red-900/30 text-red-400 border border-slate-700"
                             title="Excluir Filme do Carrinho"
@@ -246,7 +228,6 @@ export default function Cart() {
               <span className="text-emerald-400">R$ {total.toFixed(2)}</span>
             </div>
 
-            {/* SELEÇÃO DE PAGAMENTO */}
             <div className="border-t border-slate-700 pt-4">
                 <h4 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
                     <CreditCard size={16} className="text-cyan-500" /> Método de Pagamento

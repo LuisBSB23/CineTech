@@ -1,7 +1,15 @@
 import { createContext, useContext, useState, type ReactNode, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { type Reserva, type Sessao, type ItemReserva } from '../types';
-import { criarReserva, adicionarItem, confirmarReserva, getReservaAberta, cancelarReservaApi } from '../api/index';
+import { 
+  criarReserva, 
+  adicionarItem, 
+  atualizarItem, 
+  removerItem as removerItemApi,
+  confirmarReserva, 
+  getReservaAberta, 
+  cancelarReservaApi 
+} from '../api/index';
 import { useAuth } from './AuthContext';
 
 interface CartContextType {
@@ -10,6 +18,7 @@ interface CartContextType {
   error: string | null;
   itemCount: number;
   addToCart: (sessao: Sessao, quantidade: number, selectedSeats: string[]) => Promise<void>;
+  removeItem: (itemId: number) => Promise<void>; // Nova função
   checkout: () => Promise<void>;
   cancelOrder: () => Promise<void>;
   clearCart: () => void;
@@ -34,8 +43,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                     data.valorTotal = totalCalculado;
                 }
                 
-                // CORREÇÃO ERRO VISUAL: Transforma string 'A1,A2' do banco em array ['A1', 'A2']
-                // para o frontend exibir corretamente ao recarregar
                 if (data.itens) {
                     data.itens = data.itens.map(item => ({
                         ...item,
@@ -72,7 +79,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         setReserva(currentReserva);
       }
 
-      const novoItem = await adicionarItem(currentReserva.id, sessao.id, quantidade, selectedSeats);
+      // CORREÇÃO LÓGICA: Verifica se o item já existe no carrinho
+      const existingItem = currentReserva.itens?.find(i => i.sessao.id === sessao.id);
+      let novoItem: ItemReserva;
+
+      if (existingItem) {
+        // Se existe, ATUALIZA (sobrescreve) os assentos em vez de adicionar
+        novoItem = await atualizarItem(existingItem.id, sessao.id, quantidade, selectedSeats);
+      } else {
+        // Se não existe, CRIA novo item
+        novoItem = await adicionarItem(currentReserva.id, sessao.id, quantidade, selectedSeats);
+      }
 
       setReserva((prev: Reserva | null) => {
         if (!prev) return null;
@@ -81,24 +98,23 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         const existingIdx = itensSeguros.findIndex((i: ItemReserva) => i.sessao.id === sessao.id);
         let newItens = [...itensSeguros];
         
-        if (existingIdx >= 0) {
-          newItens[existingIdx] = { 
+        // Garante que os assentos venham como array para o frontend
+        const processedItem = {
             ...novoItem,
             selectedSeats: novoItem.assentos ? novoItem.assentos.split(',') : selectedSeats
-          };
+        };
+
+        if (existingIdx >= 0) {
+          newItens[existingIdx] = processedItem;
         } else {
-          newItens.push({ 
-            ...novoItem, 
-            sessao, 
-            selectedSeats: novoItem.assentos ? novoItem.assentos.split(',') : selectedSeats 
-          });
+          newItens.push({ ...processedItem, sessao }); // Sessão necessária para renderização imediata
         }
         
         const novoTotal = newItens.reduce((acc: number, i: ItemReserva) => acc + (i.sessao.valorIngresso * i.quantidade), 0);
         return { ...prev, itens: newItens, valorTotal: novoTotal };
       });
 
-      toast.success('Adicionado ao carrinho!', { id: toastId });
+      toast.success(existingItem ? 'Assentos atualizados!' : 'Adicionado ao carrinho!', { id: toastId });
 
     } catch (err: any) {
       const msg = err.response?.data || err.message || "Erro ao adicionar item";
@@ -106,6 +122,27 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       toast.error(msg, { id: toastId });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // NOVA FUNÇÃO: Remove item e atualiza estado local sem reload
+  const removeItem = async (itemId: number) => {
+    if (!reserva) return;
+    setLoading(true);
+    try {
+        await removerItemApi(itemId);
+        
+        setReserva(prev => {
+            if (!prev) return null;
+            const newItens = prev.itens.filter(i => i.id !== itemId);
+            const novoTotal = newItens.reduce((acc, i) => acc + (i.sessao.valorIngresso * i.quantidade), 0);
+            return { ...prev, itens: newItens, valorTotal: novoTotal };
+        });
+        
+    } catch (err) {
+        throw err;
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -122,7 +159,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setError(msg);
       toast.error("Erro na compra: " + msg, { id: toastId, duration: 5000 });
       
-      // Se der erro de conflito (409) ou esgotado (400), limpa o carrinho local
       if (err.response?.status === 409 || err.response?.status === 400) {
            setReserva(null); 
       }
@@ -154,7 +190,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const itemCount = reserva?.itens?.reduce((acc: number, i: ItemReserva) => acc + i.quantidade, 0) || 0;
 
   return (
-    <CartContext.Provider value={{ reserva, loading, error, itemCount, addToCart, checkout, cancelOrder, clearCart, setError }}>
+    <CartContext.Provider value={{ reserva, loading, error, itemCount, addToCart, removeItem, checkout, cancelOrder, clearCart, setError }}>
       {children}
     </CartContext.Provider>
   );

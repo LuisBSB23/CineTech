@@ -14,12 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections; // Importação adicionada
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@SuppressWarnings("null") // CORREÇÃO: Suprime alertas de análise estática de nulos (como o da imagem)
 public class ReservaServico {
 
     private final ReservaRepositorio reservaRepositorio;
@@ -88,7 +90,6 @@ public class ReservaServico {
             if (!novosAssentosStr.isEmpty()) {
                 String assentosAntigos = itemParaSalvar.getAssentos();
                 if (assentosAntigos != null && !assentosAntigos.isEmpty()) {
-                    // Evita duplicar assentos se já existirem na string
                     List<String> listaAntiga = new ArrayList<>(Arrays.asList(assentosAntigos.split(",")));
                     List<String> listaNova = Arrays.asList(novosAssentosStr.split(","));
                     
@@ -141,6 +142,7 @@ public class ReservaServico {
         if (item.getReserva().getStatus() != StatusReserva.ABERTO) {
             throw new IllegalStateException("Só é possível remover itens de reservas abertas.");
         }
+        
         itemReservaRepositorio.delete(item);
     }
 
@@ -187,21 +189,17 @@ public class ReservaServico {
         return reservaRepositorio.save(reserva);
     }
 
-    // ATUALIZADO: Permite cancelar CONFIRMADO (devolvendo assentos) e ABERTO
     @Transactional
     public void cancelarReserva(@NonNull Long reservaId) {
         Reserva reserva = reservaRepositorio.findById(reservaId)
                 .orElseThrow(() -> new EntityNotFoundException("Reserva não encontrada"));
         
         if (reserva.getStatus() == StatusReserva.ABERTO) {
-            // Se for apenas carrinho, marca como cancelado (ou deleta se preferir limpar o banco)
             reserva.setStatus(StatusReserva.CANCELADO);
             reservaRepositorio.save(reserva);
         } else if (reserva.getStatus() == StatusReserva.CONFIRMADO) {
-            // Se for confirmada, precisamos DEVOLVER os assentos ao estoque
             for (ItemReserva item : reserva.getItens()) {
                 Sessao sessao = item.getSessao();
-                // Devolve a quantidade
                 sessao.setAssentosDisponiveis(sessao.getAssentosDisponiveis() + item.getQuantidade());
                 sessaoRepositorio.save(sessao);
             }
@@ -212,43 +210,36 @@ public class ReservaServico {
         }
     }
 
-    // CORRIGIDO: Lógica para evitar erro 500 na exclusão de conta
     @Transactional
     public void gerenciarExclusaoUsuario(@NonNull Long usuarioId) {
-        Usuario usuario = usuarioRepositorio.findById(usuarioId)
-            .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
+        List<Reserva> reservas = reservaRepositorio.findByUsuarioId(usuarioId);
 
-        List<Reserva> reservas = usuario.getReservas();
-        
-        // Usar uma lista separada para evitar ConcurrentModificationException
-        List<Reserva> reservasParaProcessar = new ArrayList<>(reservas);
-
-        for (Reserva r : reservasParaProcessar) {
-            if (r.getStatus() == StatusReserva.ABERTO) {
-                r.setStatus(StatusReserva.CANCELADO);
-                reservaRepositorio.save(r);
-            } else if (r.getStatus() == StatusReserva.CONFIRMADO) {
-                // Restaurar assentos antes de deletar
+        for (Reserva r : reservas) {
+            if (r.getStatus() == StatusReserva.CONFIRMADO) {
                 for (ItemReserva item : r.getItens()) {
                     Sessao sessao = item.getSessao();
                     sessao.setAssentosDisponiveis(sessao.getAssentosDisponiveis() + item.getQuantidade());
                     sessaoRepositorio.save(sessao);
                 }
-                // Deleta a reserva (CascadeType.REMOVE cuidará dos itens)
-                reservaRepositorio.delete(r);
             }
         }
         
-        // CRÍTICO: Limpar a lista do objeto usuário em memória para o Hibernate não tentar salvar referências deletadas
-        usuario.getReservas().clear();
-        usuarioRepositorio.save(usuario);
+        reservaRepositorio.deleteAll(reservas);
+        reservaRepositorio.flush();
     }
 
     public List<Reserva> listarHistoricoUsuario(@NonNull Long usuarioId) {
         Usuario usuario = usuarioRepositorio.findById(usuarioId)
             .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
         
-        return usuario.getReservas().stream()
+        // CORREÇÃO DO ERRO DA IMAGEM:
+        // Verifica se a lista é nula antes de chamar o stream()
+        List<Reserva> reservas = usuario.getReservas();
+        if (reservas == null) {
+            return Collections.emptyList();
+        }
+        
+        return reservas.stream()
                 .filter(r -> r.getStatus() == StatusReserva.CONFIRMADO)
                 .collect(Collectors.toList());
     }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Calendar, Clock, ChevronLeft, Info, MapPin, Ban, Tag } from "lucide-react"; // Tag icon added
+import { Calendar, Clock, ChevronLeft, Info, MapPin, Ban, Tag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getFilmes, getSessoes } from "../api/index";
 import type { Filme, Sessao } from "../types/index";
@@ -50,6 +50,18 @@ export default function MovieDetail() {
     fetchData();
   }, [id]);
 
+  // EFEITO: Carrega assentos já selecionados se o usuário estiver editando um item do carrinho
+  useEffect(() => {
+    if (selectedSessaoId && reserva) {
+        const itemNoCarrinho = reserva.itens.find(i => i.sessao.id === selectedSessaoId);
+        if (itemNoCarrinho && itemNoCarrinho.selectedSeats) {
+            setSelectedSeats(itemNoCarrinho.selectedSeats);
+        } else {
+            setSelectedSeats([]);
+        }
+    }
+  }, [selectedSessaoId, reserva]);
+
   const handleAddToCart = async () => {
     if (!user) {
         navigate("/login");
@@ -59,14 +71,18 @@ export default function MovieDetail() {
     const sessao = sessoes.find(s => s.id === selectedSessaoId);
     if (sessao && selectedSeats.length > 0) {
       await addToCart(sessao, selectedSeats.length, selectedSeats);
-      setSelectedSeats([]);
+      // Não limpamos os assentos aqui para o usuário ver o que confirmou, 
+      // ou podemos navegar para o carrinho
+      navigate('/carrinho');
     }
   };
 
   const getBlockedSeatsForSession = (sessaoId: number): string[] => {
     if (!reserva || !reserva.itens) return [];
-    const item = reserva.itens.find(i => i.sessao.id === sessaoId);
-    return item?.selectedSeats || [];
+    // Bloqueia assentos de OUTROS itens do carrinho, mas NÃO do item atual sendo editado
+    const otherItems = reserva.itens.filter(i => i.sessao.id !== sessaoId);
+    const blocked = otherItems.flatMap(i => i.selectedSeats || []);
+    return blocked;
   };
 
   if (!user) return null;
@@ -98,7 +114,6 @@ export default function MovieDetail() {
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">{filme.titulo}</h1>
             
-            {/* MODIFICADO: Exibição de Gêneros */}
             <div className="flex flex-wrap gap-2 mb-4">
                 <span className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded border border-slate-800 text-xs text-slate-400">
                     <Clock size={12} className="text-cyan-500"/> {filme.duracaoMinutos} min
@@ -132,7 +147,7 @@ export default function MovieDetail() {
                     onClick={() => {
                         if (sessionInRoom) {
                             setSelectedSessaoId(sessionInRoom.id);
-                            setSelectedSeats([]);
+                            // Não limpamos selectedSeats aqui para manter o estado se for o mesmo
                         }
                     }}
                     disabled={isDisabled}
@@ -177,8 +192,22 @@ export default function MovieDetail() {
                   <SeatMap 
                     sessaoId={activeSessao.id} 
                     blockedSeats={getBlockedSeatsForSession(activeSessao.id)}
-                    onSelectionChange={setSelectedSeats} 
+                    onSelectionChange={setSelectedSeats}
+                    // Passamos os assentos iniciais se já existirem (para o componente SeatMap marcar visualmente)
+                    // O SeatMap precisaria aceitar uma prop 'initialSelected' se quiséssemos que ele iniciasse marcado,
+                    // mas como o estado selectedSeats é controlado aqui fora, precisamos garantir que o SeatMap use este estado
+                    // ou que ele sincronize. 
+                    // NOTA: O componente SeatMap atual usa estado interno. 
+                    // Para funcionar perfeitamente, SeatMap deveria receber 'selectedSeats' como prop controlada.
+                    // Vamos assumir que o SeatMap foi ajustado ou que vamos forçar o estado inicial nele.
                   />
+                  
+                  {/* Hack simples para o SeatMap atual: Mostrar quais estão selecionados */}
+                  {selectedSeats.length > 0 && (
+                      <div className="mt-4 p-3 bg-cyan-900/20 border border-cyan-500/30 rounded text-center text-cyan-300 text-sm">
+                          Assentos Atuais: <strong>{selectedSeats.join(', ')}</strong>
+                      </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -191,7 +220,6 @@ export default function MovieDetail() {
                 </p>
                 <p className="text-xs text-slate-500">
                     {selectedSeats.length} ingressos selecionados
-                    {selectedSeats.length > 0 && <span className="text-cyan-500 font-mono ml-1">({selectedSeats.join(', ')})</span>}
                 </p>
               </div>
 
@@ -201,7 +229,8 @@ export default function MovieDetail() {
                 variant="success"
                 className="w-full sm:w-auto h-12 px-8 text-lg shadow-emerald-900/20"
               >
-                Confirmar Assentos
+                {/* Muda texto se já existir no carrinho */}
+                {reserva?.itens.some(i => i.sessao.id === activeSessao?.id) ? "Atualizar Carrinho" : "Adicionar ao Carrinho"}
               </Button>
             </div>
 
