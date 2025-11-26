@@ -79,10 +79,23 @@ export default function MovieDetail() {
 
   const getBlockedSeatsForSession = (sessaoId: number): string[] => {
     if (!reserva || !reserva.itens) return [];
-    // Bloqueia assentos de OUTROS itens do carrinho, mas NÃO do item atual sendo editado
-    const otherItems = reserva.itens.filter(i => i.sessao.id !== sessaoId);
-    const blocked = otherItems.flatMap(i => i.selectedSeats || []);
-    return blocked;
+    
+    // MODIFICAÇÃO 2: Correção Lógica de Bloqueio
+    // ANTES: i.sessao.id !== sessaoId (Bloqueava tudo QUE NÃO FOSSE essa sessão - Erro)
+    // DEPOIS: i.sessao.id === sessaoId (Bloqueia apenas assentos DESTA sessão)
+    
+    // ALÉM DISSO: Filtramos para remover os assentos que JÁ ESTÃO em 'selectedSeats' (ou seja, os que estou editando).
+    // Se não fizermos isso, os assentos que eu já escolhi apareceriam vermelhos (bloqueados) e eu não conseguiria desmarcá-los.
+    
+    const sessionItems = reserva.itens.filter(i => i.sessao.id === sessaoId);
+    
+    // Pega todos os assentos do carrinho para esta sessão
+    const cartSeatsForThisSession = sessionItems.flatMap(i => i.selectedSeats || []);
+
+    // Retorna apenas os assentos que NÃO estão atualmente selecionados na UI.
+    // Isso permite que o usuário veja seus próprios assentos como "Selecionados" (Azul) e não "Bloqueados" (Vermelho),
+    // permitindo a edição (desmarcar).
+    return cartSeatsForThisSession.filter(seat => !selectedSeats.includes(seat));
   };
 
   if (!user) return null;
@@ -193,13 +206,6 @@ export default function MovieDetail() {
                     sessaoId={activeSessao.id} 
                     blockedSeats={getBlockedSeatsForSession(activeSessao.id)}
                     onSelectionChange={setSelectedSeats}
-                    // Passamos os assentos iniciais se já existirem (para o componente SeatMap marcar visualmente)
-                    // O SeatMap precisaria aceitar uma prop 'initialSelected' se quiséssemos que ele iniciasse marcado,
-                    // mas como o estado selectedSeats é controlado aqui fora, precisamos garantir que o SeatMap use este estado
-                    // ou que ele sincronize. 
-                    // NOTA: O componente SeatMap atual usa estado interno. 
-                    // Para funcionar perfeitamente, SeatMap deveria receber 'selectedSeats' como prop controlada.
-                    // Vamos assumir que o SeatMap foi ajustado ou que vamos forçar o estado inicial nele.
                   />
                   
                   {/* Hack simples para o SeatMap atual: Mostrar quais estão selecionados */}

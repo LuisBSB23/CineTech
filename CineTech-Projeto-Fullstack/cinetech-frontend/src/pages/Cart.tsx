@@ -145,19 +145,28 @@ export default function Cart() {
           {localReserva.itens.map((item: ItemReserva, i: number) => (
             <Card key={i} className="p-5 flex flex-col gap-4 group hover:border-slate-600 transition-colors relative">
               <div className="flex flex-col sm:flex-row gap-5 items-start sm:items-center">
-                  <div className="w-16 h-20 bg-slate-700 rounded-lg flex items-center justify-center shrink-0 shadow-inner">
-                    <Film className="text-slate-500" size={32}/>
+                  {/* MODIFICAÇÃO 1: Exibir Imagem do Filme ou Placeholder */}
+                  <div className="w-16 h-24 sm:w-20 sm:h-28 bg-slate-700 rounded-lg flex items-center justify-center shrink-0 shadow-lg overflow-hidden">
+                    {item.sessao.filme.imagemUrl ? (
+                        <img 
+                            src={item.sessao.filme.imagemUrl} 
+                            alt={item.sessao.filme.titulo} 
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <Film className="text-slate-500" size={32}/>
+                    )}
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-bold text-lg truncate">{item.sessao.filme.titulo}</h3>
-                    <div className="flex flex-wrap gap-3 text-sm mt-1">
+                    <h3 className="text-white font-bold text-xl truncate">{item.sessao.filme.titulo}</h3>
+                    <div className="flex flex-wrap gap-3 text-sm mt-2">
                         <p className="text-slate-400 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+                            <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
                             {new Date(item.sessao.dataHora).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
                         </p>
                         <p className="text-slate-400 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
                             {item.sessao.sala.nome}
                         </p>
                     </div>
@@ -165,13 +174,13 @@ export default function Cart() {
 
                   <div className="text-right self-end sm:self-center">
                     <div className="text-slate-500 text-xs mb-1">Unitário: R$ {item.sessao.valorIngresso.toFixed(2)}</div>
-                    <div className="font-bold text-white text-xl">
+                    <div className="font-bold text-white text-2xl">
                         R$ {(item.quantidade * item.sessao.valorIngresso).toFixed(2)}
                     </div>
                   </div>
               </div>
                 
-              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-800">
+              <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-slate-800 mt-2">
                     <div className="flex items-center gap-2 mr-auto">
                         <Ticket size={16} className="text-cyan-500" />
                         <span className="text-slate-300 text-sm font-medium">Assentos:</span>
