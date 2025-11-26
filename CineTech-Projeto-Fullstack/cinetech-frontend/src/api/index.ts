@@ -28,3 +28,5 @@ export const getReservaAberta = (usuarioId: number) => api.get<Reserva>(`/reserv
 // Cartões
 export const getCartoes = (usuarioId: number) => api.get<Cartao[]>(`/cartoes/usuario/${usuarioId}`).then(res => res.data);
 export const adicionarCartao = (dados: any) => api.post<Cartao>('/cartoes', dados).then(res => res.data);
+export const atualizarCartao = (id: number, dados: any) => api.put<Cartao>(`/cartoes/${id}`, dados).then(res => res.data);
+export const deletarCartao = (id: number) => api.delete(`/cartoes/${id}`).then(res => res.data);

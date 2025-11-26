@@ -1,16 +1,44 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShoppingCart, CheckCircle, Film, AlertCircle, Ticket, Trash2, Edit3 } from "lucide-react"; 
+import { ShoppingCart, CheckCircle, Film, AlertCircle, Ticket, Trash2, Edit3, CreditCard } from "lucide-react"; 
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext"; // Importação do Auth
 import { Card, Button } from "../components/UiComponents";
-import { type ItemReserva } from "../types/index";
+import { type ItemReserva, type Cartao } from "../types/index";
+import { getCartoes } from "../api"; // Importação API
 
 export default function Cart() {
   const { reserva, checkout, clearCart, cancelOrder, error, loading, setError } = useCart();
+  const { user } = useAuth(); // Pegar usuário
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
+  // Estado para cartões
+  const [cartoes, setCartoes] = useState<Cartao[]>([]);
+  const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
+  const [loadingCartoes, setLoadingCartoes] = useState(false);
+
+  // Carregar cartões ao montar
+  useEffect(() => {
+    if (user) {
+        setLoadingCartoes(true);
+        getCartoes(user.id)
+            .then(data => {
+                setCartoes(data);
+                if (data.length > 0) {
+                    setSelectedCardId(data[0].id); // Seleciona o primeiro por padrão
+                }
+            })
+            .catch(() => console.error("Erro ao buscar cartões"))
+            .finally(() => setLoadingCartoes(false));
+    }
+  }, [user]);
+
   const handleCheckout = async () => {
+    if (!selectedCardId) {
+        setError("Selecione um cartão para pagamento.");
+        return;
+    }
     try {
       await checkout();
       setSuccess(true);
@@ -22,7 +50,6 @@ export default function Cart() {
     navigate('/');
   };
 
-  // Botão de editar: Navega para a página do filme para permitir alterações
   const handleEdit = (filmeId: number) => {
       navigate(`/filme/${filmeId}`);
   };
@@ -87,7 +114,7 @@ export default function Cart() {
   const total = reserva.valorTotal ?? reserva.itens.reduce((acc, item) => acc + (item.quantidade * item.sessao.valorIngresso), 0);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 animate-fade-in">
+    <div className="max-w-4xl mx-auto px-4 animate-fade-in pb-20">
       <h1 className="text-3xl font-bold text-white mb-8 flex items-center gap-3">
         <ShoppingCart className="text-cyan-500"/> Finalizar Pedido
       </h1>
@@ -173,11 +200,53 @@ export default function Cart() {
               <span>Total</span>
               <span className="text-emerald-400">R$ {total.toFixed(2)}</span>
             </div>
+
+            {/* SELEÇÃO DE PAGAMENTO */}
+            <div className="border-t border-slate-700 pt-4">
+                <h4 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
+                    <CreditCard size={16} className="text-cyan-500" /> Método de Pagamento
+                </h4>
+                
+                {loadingCartoes ? (
+                    <p className="text-xs text-slate-500">Carregando cartões...</p>
+                ) : cartoes.length > 0 ? (
+                    <div className="space-y-2">
+                        {cartoes.map(c => (
+                            <button
+                                key={c.id}
+                                onClick={() => setSelectedCardId(c.id)}
+                                className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
+                                    selectedCardId === c.id 
+                                    ? "bg-cyan-900/20 border-cyan-500 ring-1 ring-cyan-500/50" 
+                                    : "bg-slate-950 border-slate-800 hover:border-slate-600"
+                                }`}
+                            >
+                                <div className={`w-8 h-5 rounded bg-gradient-to-br ${selectedCardId === c.id ? 'from-cyan-600 to-blue-600' : 'from-slate-700 to-slate-600'} flex items-center justify-center text-[8px] font-bold text-white/80`}>
+                                    {c.tipo === 'CREDITO' ? 'CR' : 'DB'}
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-xs font-medium text-white">•••• {c.numero.slice(-4)}</p>
+                                    <p className="text-[10px] text-slate-500 uppercase">{c.nomeTitular}</p>
+                                </div>
+                                {selectedCardId === c.id && <div className="w-2 h-2 rounded-full bg-cyan-500 shadow-lg shadow-cyan-500/50" />}
+                            </button>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center p-3 bg-slate-950 rounded-lg border border-slate-800 border-dashed">
+                        <p className="text-xs text-slate-500 mb-2">Nenhum cartão salvo.</p>
+                        <Button onClick={() => navigate('/perfil')} className="w-full h-8 text-xs" variant="secondary">
+                            Adicionar no Perfil
+                        </Button>
+                    </div>
+                )}
+            </div>
             
-            <div className="space-y-3">
+            <div className="space-y-3 pt-2">
                 <Button 
                     onClick={handleCheckout} 
                     isLoading={loading} 
+                    disabled={!selectedCardId}
                     variant="success" 
                     className="w-full h-14 text-lg shadow-lg shadow-emerald-900/20"
                 >

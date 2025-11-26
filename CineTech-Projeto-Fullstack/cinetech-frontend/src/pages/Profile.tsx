@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { 
   User, 
   Ticket, 
-  CreditCard as CardIcon, // Renomeado para evitar conflito
+  CreditCard as CardIcon, 
   Settings, 
   Save, 
   Edit2, 
-  Plus
+  Plus,
+  Trash2
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -16,7 +17,7 @@ import { useNavigate } from "react-router-dom";
 // Componentes e Contextos
 import { TicketCard, Button } from "../components/UiComponents";
 import { CreditCardForm } from "../components/CreditCardForm";
-import { getHistorico, getCartoes } from "../api/index";
+import { getHistorico, getCartoes, deletarCartao } from "../api/index";
 import { type Reserva, type Cartao } from "../types";
 import { useAuth } from "../context/AuthContext";
 
@@ -40,6 +41,7 @@ export default function Profile() {
   // Dados de Pagamento
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [showAddCard, setShowAddCard] = useState(false);
+  const [editingCard, setEditingCard] = useState<Cartao | null>(null);
 
   // Efeito Inicial e Carregamento de Histórico
   useEffect(() => {
@@ -57,14 +59,21 @@ export default function Profile() {
       .finally(() => setLoadingHist(false));
   }, [user, navigate]);
 
-  // Efeito para Carregar Cartões ao mudar de aba ou adicionar um novo
-  useEffect(() => {
-    if (user && activeTab === 'pagamento') {
+  // Função para recarregar cartões
+  const refreshCartoes = () => {
+    if (user) {
         getCartoes(user.id)
           .then(setCartoes)
           .catch(err => console.error("Erro ao carregar cartões", err));
     }
-  }, [user, activeTab, showAddCard]);
+  };
+
+  // Efeito para Carregar Cartões ao mudar de aba
+  useEffect(() => {
+    if (activeTab === 'pagamento') {
+        refreshCartoes();
+    }
+  }, [user, activeTab]);
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -83,6 +92,23 @@ export default function Profile() {
     } finally {
         setLoadingSave(false);
     }
+  };
+
+  const handleDeleteCartao = async (id: number) => {
+    if (confirm("Tem certeza que deseja excluir este cartão?")) {
+        try {
+            await deletarCartao(id);
+            toast.success("Cartão removido.");
+            refreshCartoes();
+        } catch (e) {
+            toast.error("Erro ao excluir cartão.");
+        }
+    }
+  };
+
+  const handleEditCartao = (cartao: Cartao) => {
+      setEditingCard(cartao);
+      setShowAddCard(true);
   };
 
   if (!user) return null;
@@ -160,7 +186,6 @@ export default function Profile() {
             <CardIcon size={18} /> Pagamentos
           </button>
           
-          {/* Botão de Configurações (Apenas visual por enquanto) */}
           <button className="w-full flex items-center gap-3 p-3 rounded-lg text-slate-400 hover:bg-slate-900 hover:text-slate-200 transition-colors cursor-not-allowed opacity-60">
             <Settings size={18} /> Configurações
           </button>
@@ -213,7 +238,7 @@ export default function Profile() {
                  <>
                     <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-6">
                         <h2 className="text-xl font-bold text-white">Meus Cartões</h2>
-                        <Button onClick={() => setShowAddCard(true)} className="h-8 text-xs px-3">
+                        <Button onClick={() => { setEditingCard(null); setShowAddCard(true); }} className="h-8 text-xs px-3">
                             <Plus size={16} /> Adicionar Novo
                         </Button>
                     </div>
@@ -237,7 +262,7 @@ export default function Profile() {
                                     animate={{ opacity: 1, y: 0 }}
                                     className="flex items-center gap-4 p-4 bg-slate-800/40 rounded-xl border border-slate-700 hover:border-slate-600 hover:bg-slate-800/60 transition-all group"
                                 >
-                                    {/* Ícone do Cartão (Simulado) */}
+                                    {/* Ícone do Cartão */}
                                     <div className="w-12 h-8 bg-gradient-to-br from-slate-600 to-slate-800 rounded flex items-center justify-center text-[10px] font-bold text-white/30 shadow-inner border border-white/5">
                                         {c.tipo === 'CREDITO' ? 'CRED' : 'DEB'}
                                     </div>
@@ -247,7 +272,6 @@ export default function Profile() {
                                             <p className="text-white font-medium tracking-wide">
                                                 •••• •••• •••• {c.numero.slice(-4)}
                                             </p>
-                                            {/* Badge Tipo */}
                                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-700">
                                                 {c.tipo}
                                             </span>
@@ -255,9 +279,27 @@ export default function Profile() {
                                         <p className="text-xs text-slate-400 uppercase mt-0.5 tracking-wider">{c.nomeTitular}</p>
                                     </div>
                                     
-                                    <div className="text-right">
-                                        <p className="text-[10px] text-slate-500 uppercase mb-0.5">Validade</p>
-                                        <p className="text-sm text-slate-300 font-mono">{c.validade}</p>
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-right mr-4 hidden sm:block">
+                                            <p className="text-[10px] text-slate-500 uppercase mb-0.5">Validade</p>
+                                            <p className="text-sm text-slate-300 font-mono">{c.validade}</p>
+                                        </div>
+                                        
+                                        {/* Botões de Ação */}
+                                        <button 
+                                            onClick={() => handleEditCartao(c)}
+                                            className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-700/50 rounded-lg transition-colors"
+                                            title="Editar"
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDeleteCartao(c.id)}
+                                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+                                            title="Excluir"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
                                     </div>
                                 </motion.div>
                             ))}
@@ -266,7 +308,8 @@ export default function Profile() {
                  </>
                ) : (
                  <CreditCardForm 
-                    onSuccess={() => setShowAddCard(false)} 
+                    initialData={editingCard}
+                    onSuccess={() => { setShowAddCard(false); refreshCartoes(); }} 
                     onCancel={() => setShowAddCard(false)} 
                  />
                )}

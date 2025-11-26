@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { CreditCard, Calendar, Lock, User, CheckCircle } from "lucide-react";
 import { Button } from "./UiComponents";
 import { useAuth } from "../context/AuthContext";
-import { adicionarCartao } from "../api";
+import { adicionarCartao, atualizarCartao } from "../api";
 import { toast } from "react-hot-toast";
+import type { Cartao } from "../types";
 
 interface CreditCardFormProps {
   onSuccess: () => void;
   onCancel: () => void;
+  initialData?: Cartao | null; // Para edição
 }
 
-export const CreditCardForm = ({ onSuccess, onCancel }: CreditCardFormProps) => {
+export const CreditCardForm = ({ onSuccess, onCancel, initialData }: CreditCardFormProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   
@@ -22,6 +24,17 @@ export const CreditCardForm = ({ onSuccess, onCancel }: CreditCardFormProps) => 
   const [cvv, setCvv] = useState("");
   const [tipo, setTipo] = useState("CREDITO");
   const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  // Preencher dados se for edição
+  useEffect(() => {
+    if (initialData) {
+      setNumero(initialData.numero);
+      setNome(initialData.nomeTitular);
+      setValidade(initialData.validade);
+      setCvv(initialData.cvv);
+      setTipo(initialData.tipo);
+    }
+  }, [initialData]);
 
   // Formatações simples
   const handleNumeroChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,16 +53,23 @@ export const CreditCardForm = ({ onSuccess, onCancel }: CreditCardFormProps) => 
     if (!user) return;
 
     setLoading(true);
-    try {
-      await adicionarCartao({
+    const dados = {
         usuarioId: user.id,
         tipo,
         numero,
         nomeTitular: nome,
         validade,
         cvv
-      });
-      toast.success("Cartão adicionado com sucesso!");
+    };
+
+    try {
+      if (initialData) {
+        await atualizarCartao(initialData.id, dados);
+        toast.success("Cartão atualizado com sucesso!");
+      } else {
+        await adicionarCartao(dados);
+        toast.success("Cartão adicionado com sucesso!");
+      }
       onSuccess();
     } catch (err) {
       toast.error("Erro ao salvar cartão.");
@@ -58,15 +78,16 @@ export const CreditCardForm = ({ onSuccess, onCancel }: CreditCardFormProps) => 
     }
   };
 
-  // Ilustração do Cartão (CineTech Style)
+  // Ilustração do Cartão (CineTech Style) - CORRIGIDA
   const CardIllustration = () => (
-    <div className="relative w-full max-w-sm mx-auto aspect-[1.586/1] perspective-1000 mb-8">
+    <div className="relative w-full max-w-sm mx-auto aspect-[1.586/1] perspective-1000 mb-8 group">
       <motion.div
         className="w-full h-full relative preserve-3d transition-all duration-500"
         animate={{ rotateY: focusedField === "cvv" ? 180 : 0 }}
+        initial={false}
       >
         {/* Frente do Cartão */}
-        <div className="absolute inset-0 backface-hidden bg-gradient-to-br from-slate-800 to-slate-950 rounded-2xl border border-slate-700 shadow-2xl shadow-cyan-900/20 p-6 flex flex-col justify-between overflow-hidden">
+        <div className="absolute inset-0 backface-hidden bg-gradient-to-br from-slate-800 to-slate-950 rounded-2xl border border-slate-700 shadow-2xl shadow-cyan-900/20 p-6 flex flex-col justify-between overflow-hidden z-20">
           {/* Efeito de Brilho */}
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/20 blur-3xl rounded-full pointer-events-none"></div>
           
@@ -102,15 +123,20 @@ export const CreditCardForm = ({ onSuccess, onCancel }: CreditCardFormProps) => 
 
         {/* Verso do Cartão */}
         <div 
-          className="absolute inset-0 backface-hidden bg-slate-900 rounded-2xl border border-slate-800 shadow-xl p-6 flex flex-col justify-center rotate-y-180"
-          style={{ transform: "rotateY(180deg)" }}
+          className="absolute inset-0 backface-hidden bg-slate-900 rounded-2xl border border-slate-800 shadow-xl p-6 flex flex-col justify-center rotate-y-180 z-10"
         >
           <div className="absolute top-6 left-0 w-full h-10 bg-slate-950"></div>
           <div className="mt-4">
-            <div className="flex items-center justify-end bg-slate-200 h-10 rounded px-3">
-              <span className="font-mono text-slate-900 font-bold text-lg">{cvv || "***"}</span>
+            <div className="flex items-center justify-end bg-slate-200 h-10 rounded px-3 relative">
+               <div className="absolute inset-0 flex items-center justify-center opacity-10 text-[8px] overflow-hidden select-none">
+                  CINETECH CINETECH CINETECH CINETECH
+               </div>
+              <span className="font-mono text-slate-900 font-bold text-lg z-10">{cvv || "***"}</span>
             </div>
             <p className="text-xs text-slate-500 mt-2 text-right">Código de Segurança (CVV)</p>
+          </div>
+          <div className="absolute bottom-6 right-6 w-12 h-8 bg-white/10 rounded flex items-center justify-center">
+             <div className="w-8 h-5 border border-white/20 rounded"></div>
           </div>
         </div>
       </motion.div>
@@ -119,7 +145,9 @@ export const CreditCardForm = ({ onSuccess, onCancel }: CreditCardFormProps) => 
 
   return (
     <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 animate-fade-in">
-      <h2 className="text-xl font-bold text-white mb-6 text-center">Adicionar Cartão</h2>
+      <h2 className="text-xl font-bold text-white mb-6 text-center">
+        {initialData ? "Editar Cartão" : "Adicionar Cartão"}
+      </h2>
       
       {/* Visualização do Cartão */}
       <CardIllustration />
@@ -201,7 +229,7 @@ export const CreditCardForm = ({ onSuccess, onCancel }: CreditCardFormProps) => 
         <div className="pt-4 flex gap-3">
             <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">Cancelar</Button>
             <Button type="submit" variant="success" isLoading={loading} className="flex-1">
-                <CheckCircle size={18} /> Salvar
+                <CheckCircle size={18} /> {initialData ? "Atualizar" : "Salvar"}
             </Button>
         </div>
       </form>

@@ -15,6 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/cartoes")
+@SuppressWarnings("null") // CORREÇÃO: Silencia avisos de "Null type safety" do editor
 public class CartaoControlador {
 
     private final CartaoRepositorio cartaoRepositorio;
@@ -41,8 +42,6 @@ public class CartaoControlador {
     }
 
     @PostMapping
-    // CORREÇÃO: SuppressWarnings adicionado para evitar aviso de "Null type safety" no request.usuarioId()
-    @SuppressWarnings("null")
     public ResponseEntity<?> adicionarCartao(@RequestBody @Valid CartaoRequest request) {
         Usuario usuario = usuarioRepositorio.findById(request.usuarioId())
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
@@ -56,5 +55,28 @@ public class CartaoControlador {
         cartao.setCvv(request.cvv());
 
         return ResponseEntity.ok(cartaoRepositorio.save(cartao));
+    }
+
+    // NOVO: Endpoint para Atualizar Cartão
+    @PutMapping("/{id}")
+    public ResponseEntity<?> atualizarCartao(@PathVariable Long id, @RequestBody @Valid CartaoRequest request) {
+        return cartaoRepositorio.findById(id).map(cartao -> {
+            cartao.setTipo(request.tipo());
+            cartao.setNumero(request.numero());
+            cartao.setNomeTitular(request.nomeTitular().toUpperCase());
+            cartao.setValidade(request.validade());
+            cartao.setCvv(request.cvv());
+            return ResponseEntity.ok(cartaoRepositorio.save(cartao));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    // NOVO: Endpoint para Excluir Cartão
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deletarCartao(@PathVariable Long id) {
+        if (!cartaoRepositorio.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        cartaoRepositorio.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }
