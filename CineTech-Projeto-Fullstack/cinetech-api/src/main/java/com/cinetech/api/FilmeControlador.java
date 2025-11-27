@@ -1,9 +1,10 @@
 package com.cinetech.api;
 
+import com.cinetech.api.dto.CriarSessaoRequest;
 import com.cinetech.dominio.modelo.Filme;
 import com.cinetech.dominio.modelo.Sessao;
 import com.cinetech.servico.FilmeServico;
-// REMOVIDO: import jakarta.validation.Valid; (Não estava sendo usado)
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/filmes")
+@SuppressWarnings("null") // CORREÇÃO: Suprime avisos de segurança de nulidade da IDE
 public class FilmeControlador {
 
     private final FilmeServico filmeServico;
@@ -30,10 +32,23 @@ public class FilmeControlador {
         return filmeServico.listarSessoesPorFilme(id);
     }
 
-    // NOVO: Endpoint para Adicionar Filme (POST)
     @PostMapping
     public ResponseEntity<Filme> adicionarFilme(@RequestBody @NonNull Filme filme) {
         Filme novoFilme = filmeServico.salvarFilme(filme);
         return ResponseEntity.ok(novoFilme);
+    }
+
+    // Endpoint para adicionar sessão a um filme
+    @PostMapping("/{id}/sessoes")
+    public ResponseEntity<?> adicionarSessao(@PathVariable @NonNull Long id, @RequestBody @Valid CriarSessaoRequest request) {
+        Sessao novaSessao = filmeServico.adicionarSessao(id, request);
+        return ResponseEntity.ok(novaSessao);
+    }
+
+    // Endpoint para deletar filme
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deletarFilme(@PathVariable @NonNull Long id) {
+        filmeServico.deletarFilme(id);
+        return ResponseEntity.noContent().build();
     }
 }

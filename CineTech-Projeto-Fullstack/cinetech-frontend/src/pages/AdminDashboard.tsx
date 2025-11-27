@@ -1,14 +1,19 @@
 import { useEffect, useState, useMemo } from "react";
-// REMOVIDO: Search (Não usado)
-import { ShieldAlert, Plus, Film, Clock, Image as ImageIcon, List } from "lucide-react";
-// REMOVIDO: Card (Não usado)
+import { ShieldAlert, Plus, Film, Clock, Image as ImageIcon, List, Trash2, CalendarPlus, Calendar } from "lucide-react";
 import { Button } from "../components/UiComponents";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { getFilmes, criarFilme } from "../api";
+import { getFilmes, criarFilme, deletarFilmeApi, criarSessao } from "../api";
 import type { Filme } from "../types";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
+
+// Salas Hardcoded conforme backend
+const SALAS = [
+    { id: 1, nome: "Sala 1 - IMAX" },
+    { id: 2, nome: "Sala 2 - VIP" },
+    { id: 3, nome: "Sala 3 - Padrão" }
+];
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -16,18 +21,27 @@ export default function AdminDashboard() {
   const [filmes, setFilmes] = useState<Filme[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showSessionModal, setShowSessionModal] = useState(false);
   
-  // Busca da URL (Navbar)
+  // Filme selecionado para ações (excluir ou adicionar sessão)
+  const [selectedFilme, setSelectedFilme] = useState<Filme | null>(null);
+  
+  // Busca da URL
   const [searchParams] = useSearchParams();
   const searchTerm = searchParams.get("q")?.toLowerCase() || "";
 
-  // Form States
+  // Form States (Filme)
   const [titulo, setTitulo] = useState("");
   const [sinopse, setSinopse] = useState("");
   const [duracao, setDuracao] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
   const [generos, setGeneros] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Form States (Sessão)
+  const [sessaoData, setSessaoData] = useState("");
+  const [sessaoValor, setSessaoValor] = useState("");
+  const [sessaoSala, setSessaoSala] = useState("1");
 
   useEffect(() => {
     if (user && user.perfil !== 'ADMIN') {
@@ -39,7 +53,6 @@ export default function AdminDashboard() {
     setLoading(true);
     getFilmes()
       .then(setFilmes)
-      // CORRIGIDO: Removido argumento 'err' não usado
       .catch(() => toast.error("Erro ao carregar filmes"))
       .finally(() => setLoading(false));
   };
@@ -48,7 +61,7 @@ export default function AdminDashboard() {
     loadFilmes();
   }, []);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSaveFilme = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
@@ -68,6 +81,46 @@ export default function AdminDashboard() {
     } finally {
         setSaving(false);
     }
+  };
+
+  const handleDeleteFilme = async (id: number) => {
+      if (!confirm("Tem certeza que deseja excluir este filme? Todas as sessões e ingressos associados serão removidos.")) return;
+      
+      const toastId = toast.loading("Excluindo...");
+      try {
+          await deletarFilmeApi(id);
+          toast.success("Filme excluído.", { id: toastId });
+          loadFilmes();
+      } catch (e) {
+          toast.error("Erro ao excluir filme.", { id: toastId });
+      }
+  };
+
+  const handleAddSession = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!selectedFilme) return;
+
+      setSaving(true);
+      try {
+          await criarSessao(selectedFilme.id, {
+              dataHora: sessaoData,
+              valorIngresso: parseFloat(sessaoValor),
+              salaId: parseInt(sessaoSala)
+          });
+          toast.success("Sessão criada com sucesso!");
+          setShowSessionModal(false);
+          setSessaoData("");
+          setSessaoValor("");
+      } catch (e) {
+          toast.error("Erro ao criar sessão.");
+      } finally {
+          setSaving(false);
+      }
+  };
+
+  const openSessionModal = (filme: Filme) => {
+      setSelectedFilme(filme);
+      setShowSessionModal(true);
   };
 
   const resetForm = () => {
@@ -113,26 +166,40 @@ export default function AdminDashboard() {
         ) : (
             <div className="divide-y divide-slate-800">
                 {filteredFilmes.map((filme) => (
-                    <div key={filme.id} className="p-4 flex items-center gap-4 hover:bg-slate-800/30 transition-colors group">
-                        <div className="w-12 h-16 bg-slate-800 rounded overflow-hidden flex-shrink-0">
+                    <div key={filme.id} className="p-4 flex flex-col sm:flex-row items-center gap-4 hover:bg-slate-800/30 transition-colors group">
+                        <div className="w-12 h-16 bg-slate-800 rounded overflow-hidden flex-shrink-0 shadow-md">
                             {filme.imagemUrl ? (
                                 <img src={filme.imagemUrl} alt={filme.titulo} className="w-full h-full object-cover" />
                             ) : (
                                 <Film className="w-full h-full p-3 text-slate-600" />
                             )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-white truncate">{filme.titulo}</h4>
-                            <div className="flex flex-wrap gap-3 text-xs text-slate-400 mt-1">
-                                <span className="flex items-center gap-1"><Clock size={10} /> {filme.duracaoMinutos} min</span>
-                                <span>|</span>
+                        <div className="flex-1 min-w-0 text-center sm:text-left">
+                            <h4 className="font-bold text-white truncate text-lg">{filme.titulo}</h4>
+                            <div className="flex flex-wrap justify-center sm:justify-start gap-3 text-xs text-slate-400 mt-1">
+                                <span className="flex items-center gap-1"><Clock size={12} /> {filme.duracaoMinutos} min</span>
+                                <span className="hidden sm:inline">|</span>
                                 <span className="truncate max-w-[200px]">{filme.generos}</span>
                             </div>
                         </div>
-                        <div className="text-right hidden sm:block">
-                            <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400 border border-slate-700">
-                                ID: {filme.id}
-                            </span>
+                        
+                        {/* Ações */}
+                        <div className="flex items-center gap-3">
+                            <Button 
+                                onClick={() => openSessionModal(filme)}
+                                className="h-9 text-xs bg-slate-800 hover:bg-cyan-900/30 text-cyan-400 border border-slate-700 hover:border-cyan-500/50"
+                                title="Adicionar Sessão"
+                            >
+                                <CalendarPlus size={16} className="sm:mr-1" /> <span className="hidden sm:inline">Sessão</span>
+                            </Button>
+                            
+                            <Button 
+                                onClick={() => handleDeleteFilme(filme.id)}
+                                className="h-9 w-9 p-0 bg-slate-800 hover:bg-red-900/30 text-red-400 border border-slate-700 hover:border-red-500/50"
+                                title="Excluir Filme"
+                            >
+                                <Trash2 size={16} />
+                            </Button>
                         </div>
                     </div>
                 ))}
@@ -156,7 +223,7 @@ export default function AdminDashboard() {
                         <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white">✕</button>
                     </div>
                     
-                    <form onSubmit={handleSave} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                    <form onSubmit={handleSaveFilme} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-sm text-slate-300">Título do Filme</label>
@@ -194,11 +261,6 @@ export default function AdminDashboard() {
                                     />
                                 </div>
                             </div>
-                            {imagemUrl && (
-                                <div className="h-40 w-28 bg-slate-800 rounded mx-auto mt-2 overflow-hidden border border-slate-700">
-                                    <img src={imagemUrl} alt="Preview" className="w-full h-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
-                                </div>
-                            )}
                         </div>
 
                         <div className="space-y-2">
@@ -227,6 +289,76 @@ export default function AdminDashboard() {
                         <div className="pt-4 flex justify-end gap-3 border-t border-slate-800 mt-4">
                             <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Button>
                             <Button type="submit" variant="success" isLoading={saving}>Salvar Filme</Button>
+                        </div>
+                    </form>
+                </motion.div>
+            </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Adicionar Sessão */}
+      <AnimatePresence>
+        {showSessionModal && selectedFilme && (
+            <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            >
+                <motion.div 
+                    initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                    className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
+                >
+                    <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                            <Calendar className="text-cyan-500" /> Nova Sessão
+                        </h2>
+                        <button onClick={() => setShowSessionModal(false)} className="text-slate-400 hover:text-white">✕</button>
+                    </div>
+                    
+                    <div className="px-6 pt-4 pb-2">
+                        <p className="text-sm text-slate-400">Filme: <span className="text-white font-bold">{selectedFilme.titulo}</span></p>
+                    </div>
+
+                    <form onSubmit={handleAddSession} className="p-6 space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm text-slate-300">Data e Hora</label>
+                            <input 
+                                required 
+                                type="datetime-local"
+                                className="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-white focus:border-cyan-500 outline-none"
+                                value={sessaoData}
+                                onChange={e => setSessaoData(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm text-slate-300">Valor do Ingresso (R$)</label>
+                            <input 
+                                required 
+                                type="number"
+                                step="0.01"
+                                className="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-white focus:border-cyan-500 outline-none"
+                                value={sessaoValor}
+                                onChange={e => setSessaoValor(e.target.value)}
+                                placeholder="Ex: 35.00"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm text-slate-300">Sala</label>
+                            <select
+                                value={sessaoSala}
+                                onChange={e => setSessaoSala(e.target.value)}
+                                className="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-white focus:border-cyan-500 outline-none"
+                            >
+                                {SALAS.map(sala => (
+                                    <option key={sala.id} value={sala.id}>{sala.nome}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="pt-4 flex justify-end gap-3 border-t border-slate-800 mt-2">
+                            <Button type="button" variant="secondary" onClick={() => setShowSessionModal(false)}>Cancelar</Button>
+                            <Button type="submit" variant="success" isLoading={saving}>Criar Sessão</Button>
                         </div>
                     </form>
                 </motion.div>

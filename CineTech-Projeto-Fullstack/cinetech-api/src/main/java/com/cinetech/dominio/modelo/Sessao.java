@@ -1,14 +1,12 @@
 package com.cinetech.dominio.modelo;
 
 import com.cinetech.excecao.AssentosEsgotadosExcecao;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 
-/**
- * Entidade JPA que mapeia a tabela TB_SESSAO.
- * MODIFICADO: FetchType alterado para EAGER para evitar erros de serialização JSON (LazyInitializationException).
- */
 @Entity
 @Table(name = "TB_SESSAO")
 public class Sessao {
@@ -26,21 +24,18 @@ public class Sessao {
     @Column(nullable = false)
     private int assentosDisponiveis;
 
-    /**
-     * Relacionamento: Muitas Sessões pertencem a um Filme.
-     * ALTERADO: FetchType.EAGER garante que o Filme venha junto com a Sessão.
-     */
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "filme_id", nullable = false)
     private Filme filme;
 
-    /**
-     * Relacionamento: Muitas Sessões ocorrem em uma Sala.
-     * ALTERADO: FetchType.EAGER garante que a Sala venha junto com a Sessão.
-     */
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "sala_id", nullable = false)
     private Sala sala;
+
+    // NOVO: Relacionamento para permitir o Cascade Remove dos itens se a sessão for deletada
+    @OneToMany(mappedBy = "sessao", cascade = CascadeType.REMOVE)
+    @JsonIgnore
+    private List<ItemReserva> itens;
     
     public Sessao() {
     }
@@ -68,6 +63,8 @@ public class Sessao {
     public void setFilme(Filme filme) { this.filme = filme; }
     public Sala getSala() { return sala; }
     public void setSala(Sala sala) { this.sala = sala; }
+    public List<ItemReserva> getItens() { return itens; }
+    public void setItens(List<ItemReserva> itens) { this.itens = itens; }
 
     @Override
     public boolean equals(Object o) {

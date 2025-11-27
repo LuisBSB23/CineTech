@@ -25,11 +25,11 @@ public class Filme {
     @Column(length = 500)
     private String imagemUrl;
 
-    // NOVO CAMPO: Gêneros
     @Column(nullable = false)
     private String generos;
 
-    @OneToMany(mappedBy = "filme")
+    // MUDANÇA: Adicionado CascadeType.REMOVE para deletar sessões quando o filme for deletado
+    @OneToMany(mappedBy = "filme", cascade = CascadeType.REMOVE)
     @JsonIgnore
     private List<Sessao> sessoes;
 
@@ -47,7 +47,6 @@ public class Filme {
     public String getImagemUrl() { return imagemUrl; }
     public void setImagemUrl(String imagemUrl) { this.imagemUrl = imagemUrl; }
     
-    // Getter e Setter para Gêneros
     public String getGeneros() { return generos; }
     public void setGeneros(String generos) { this.generos = generos; }
     
