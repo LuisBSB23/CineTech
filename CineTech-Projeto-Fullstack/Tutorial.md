@@ -41,7 +41,7 @@ cd cinetech
 2. Crie um banco de dados vazio chamado cinetechdb:  
    CREATE DATABASE cinetechdb;
 
-3. **Importante:** O projeto está configurado para usar o usuário root e senha samyi23s11. Se o seu MySQL local usar credenciais diferentes, você precisará alterar o arquivo de configuração do backend.
+3. **Importante:** O projeto está configurado para usar o usuário root e senha SUA-SENHA. Se o seu MySQL local usar credenciais diferentes, você precisará alterar o arquivo de configuração do backend.
 
 ### **3\. Configurando e Rodando o Backend (cinetech-api)**
 
