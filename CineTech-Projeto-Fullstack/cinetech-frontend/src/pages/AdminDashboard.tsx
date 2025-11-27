@@ -1,10 +1,10 @@
 import { useEffect, useState, useMemo } from "react";
-import { ShieldAlert, Plus, Film, Clock, Image as ImageIcon, List, Trash2, CalendarPlus, Calendar } from "lucide-react";
+import { ShieldAlert, Plus, Film, Clock, Image as ImageIcon, List, Trash2, CalendarPlus, Calendar, AlertTriangle } from "lucide-react";
 import { Button } from "../components/UiComponents";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { getFilmes, criarFilme, deletarFilmeApi, criarSessao } from "../api";
-import type { Filme } from "../types";
+import { getFilmes, criarFilme, deletarFilmeApi, criarSessao, getSessoes } from "../api";
+import type { Filme, Sessao } from "../types";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -20,11 +20,14 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [filmes, setFilmes] = useState<Filme[]>([]);
   const [loading, setLoading] = useState(true);
+  
   const [showModal, setShowModal] = useState(false);
   const [showSessionModal, setShowSessionModal] = useState(false);
   
-  // Filme selecionado para ações (excluir ou adicionar sessão)
+  // Estados para controle de modais e dados
   const [selectedFilme, setSelectedFilme] = useState<Filme | null>(null);
+  const [filmeToDelete, setFilmeToDelete] = useState<Filme | null>(null); // Controle da exclusão
+  const [existingSessions, setExistingSessions] = useState<Sessao[]>([]); // Controle de validação de sala
   
   // Busca da URL
   const [searchParams] = useSearchParams();
@@ -83,22 +86,37 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDeleteFilme = async (id: number) => {
-      if (!confirm("Tem certeza que deseja excluir este filme? Todas as sessões e ingressos associados serão removidos.")) return;
+  // Função para abrir modal de confirmação de exclusão
+  const requestDeleteFilme = (filme: Filme) => {
+      setFilmeToDelete(filme);
+  };
+
+  // Função que efetivamente exclui o filme
+  const confirmDeleteFilme = async () => {
+      if (!filmeToDelete) return;
       
       const toastId = toast.loading("Excluindo...");
       try {
-          await deletarFilmeApi(id);
+          await deletarFilmeApi(filmeToDelete.id);
           toast.success("Filme excluído.", { id: toastId });
           loadFilmes();
       } catch (e) {
           toast.error("Erro ao excluir filme.", { id: toastId });
+      } finally {
+          setFilmeToDelete(null);
       }
   };
 
   const handleAddSession = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!selectedFilme) return;
+
+      // Validação extra no frontend para garantir que a sala não está ocupada
+      const isOccupied = existingSessions.some(s => s.sala.id === parseInt(sessaoSala));
+      if (isOccupied) {
+          toast.error("Este filme já possui uma sessão nesta sala.");
+          return;
+      }
 
       setSaving(true);
       try {
@@ -118,9 +136,18 @@ export default function AdminDashboard() {
       }
   };
 
-  const openSessionModal = (filme: Filme) => {
+  const openSessionModal = async (filme: Filme) => {
       setSelectedFilme(filme);
+      setExistingSessions([]); // Limpa estado anterior
       setShowSessionModal(true);
+      
+      // Busca as sessões já existentes para este filme para bloquear as salas
+      try {
+          const sessoes = await getSessoes(filme.id);
+          setExistingSessions(sessoes);
+      } catch (error) {
+          console.error("Erro ao buscar sessões existentes", error);
+      }
   };
 
   const resetForm = () => {
@@ -194,7 +221,7 @@ export default function AdminDashboard() {
                             </Button>
                             
                             <Button 
-                                onClick={() => handleDeleteFilme(filme.id)}
+                                onClick={() => requestDeleteFilme(filme)}
                                 className="h-9 w-9 p-0 bg-slate-800 hover:bg-red-900/30 text-red-400 border border-slate-700 hover:border-red-500/50"
                                 title="Excluir Filme"
                             >
@@ -350,9 +377,20 @@ export default function AdminDashboard() {
                                 onChange={e => setSessaoSala(e.target.value)}
                                 className="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-white focus:border-cyan-500 outline-none"
                             >
-                                {SALAS.map(sala => (
-                                    <option key={sala.id} value={sala.id}>{sala.nome}</option>
-                                ))}
+                                {SALAS.map(sala => {
+                                    // Verifica se este filme JÁ POSSUI uma sessão cadastrada nesta sala
+                                    const isOccupied = existingSessions.some(s => s.sala.id === sala.id);
+                                    return (
+                                        <option 
+                                            key={sala.id} 
+                                            value={sala.id}
+                                            disabled={isOccupied}
+                                            className={isOccupied ? "text-slate-600 bg-slate-900" : ""}
+                                        >
+                                            {sala.nome} {isOccupied ? "(Ocupada)" : ""}
+                                        </option>
+                                    );
+                                })}
                             </select>
                         </div>
 
@@ -365,6 +403,51 @@ export default function AdminDashboard() {
             </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <AnimatePresence>
+        {filmeToDelete && (
+            <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            >
+                <motion.div 
+                    initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                    className="bg-slate-900 border border-red-900/50 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden"
+                >
+                    <div className="p-6 text-center">
+                        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+                            <AlertTriangle className="text-red-500" size={32} />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">Excluir Filme?</h3>
+                        <p className="text-slate-400 text-sm mb-2">
+                            Você está prestes a excluir <strong>{filmeToDelete.titulo}</strong>.
+                        </p>
+                        <p className="text-slate-500 text-xs">
+                            Isso removerá permanentemente todas as sessões e ingressos associados a este filme.
+                        </p>
+                    </div>
+                    
+                    <div className="flex border-t border-slate-800">
+                        <button 
+                            onClick={() => setFilmeToDelete(null)}
+                            className="flex-1 py-4 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors text-sm font-medium"
+                        >
+                            Cancelar
+                        </button>
+                        <div className="w-px bg-slate-800"></div>
+                        <button 
+                            onClick={confirmDeleteFilme}
+                            className="flex-1 py-4 text-red-400 hover:bg-red-950/30 hover:text-red-300 transition-colors text-sm font-bold"
+                        >
+                            Sim, Excluir
+                        </button>
+                    </div>
+                </motion.div>
+            </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
