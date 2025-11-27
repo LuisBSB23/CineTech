@@ -50,7 +50,7 @@ O Git ignora a pasta target (onde ficam os compilados). O Maven baixará as depe
 1. Navegue até a pasta da API:  
    cd CineTech-Projeto-Fullstack/cinetech-api
 
-2. (Opcional) Se sua senha do MySQL não for a padrão do projeto, edite o arquivo src/main/resources/application.properties:  
+2. Se sua senha do MySQL não for a padrão do projeto, edite o arquivo src/main/resources/application.properties:  
    spring.datasource.username=SEU\_USUARIO  
    spring.datasource.password=SUA\_SENHA
 
@@ -66,14 +66,14 @@ O Git ignora a pasta target (onde ficam os compilados). O Maven baixará as depe
 O Git ignora a pasta node\_modules (onde ficam as bibliotecas do React). Você precisa restaurá-las.
 
 1. Abra um novo terminal e navegue até a pasta do frontend:  
-   cd CineTech-Projeto-Fullstack/cinetech-frontend
+   Rode: cd CineTech-Projeto-Fullstack/cinetech-frontend
 
 2. Instale as dependências:  
    Este comando lê o package.json e baixa tudo o que foi ignorado pelo git:  
-   npm install
+    Rode: npm install
 
 3. **Execute o projeto:**  
-   npm run dev
+   Rode: npm run dev
 
 4. Acesse a aplicação no navegador (geralmente em):  
    http://localhost:5173
@@ -91,14 +91,3 @@ O sistema já vem com usuários pré-cadastrados para facilitar os testes:
 
 * **Email:** ana@email.com  
 * **Senha:** 123456
-
-## **📦 Estrutura de Dependências (O que é baixado)**
-
-Como o .gitignore remove arquivos pesados, aqui está o que acontece quando você roda os comandos de instalação:
-
-1. **No Frontend (npm install):**  
-   * Baixa bibliotecas como react, react-dom, react-router-dom, framer-motion, axios e tailwindcss.  
-   * Cria a pasta node\_modules.  
-2. **No Backend (mvn install ou execução):**  
-   * Baixa bibliotecas do ecossistema Spring (spring-boot-starter-web, spring-boot-starter-data-jpa, spring-boot-starter-security, etc) e o driver do MySQL.  
-   * Gera a pasta target com os arquivos .class compilados.
