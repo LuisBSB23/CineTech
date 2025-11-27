@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Film, Clock, Tag, Play } from "lucide-react";
+import { Film, Clock, Tag } from "lucide-react";
 import { motion } from "framer-motion";
 import { getFilmes } from "../api";
 import type { Filme } from "../types";
@@ -80,9 +80,6 @@ export default function Home() {
               <div className="flex gap-4">
                 <Button onClick={(e) => handleProtectedAction(e, `/filme/${featuredMovie.id}`)} className="h-12 px-8 text-lg" variant="primary">
                   <Tag size={20} /> Reservar Agora
-                </Button>
-                <Button onClick={(e) => handleProtectedAction(e, `/filme/${featuredMovie.id}`)} className="h-12 px-8 text-lg" variant="secondary">
-                  <Play size={20} /> Trailer
                 </Button>
               </div>
             </motion.div>
