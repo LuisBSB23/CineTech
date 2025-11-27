@@ -9,17 +9,18 @@ const api = axios.create({
 });
 
 export const getFilmes = () => api.get<Filme[]>('/filmes').then(res => res.data);
+// NOVO: Função para criar filme
+export const criarFilme = (filme: Partial<Filme>) => api.post<Filme>('/filmes', filme).then(res => res.data);
+
 export const getSessoes = (filmeId: number) => api.get<Sessao[]>(`/filmes/${filmeId}/sessoes`).then(res => res.data);
 export const criarReserva = (usuarioId: number) => api.post<Reserva>('/reservas', { usuarioId }).then(res => res.data);
 
 export const adicionarItem = (reservaId: number, sessaoId: number, quantidade: number, assentos: string[]) => 
   api.put<ItemReserva>(`/reservas/${reservaId}/item`, { sessaoId, quantidade, assentos }).then(res => res.data);
 
-// NOVO: Atualizar Item (Remover assento específico)
 export const atualizarItem = (itemId: number, sessaoId: number, quantidade: number, assentos: string[]) => 
   api.put<ItemReserva>(`/reservas/item/${itemId}`, { sessaoId, quantidade, assentos }).then(res => res.data);
 
-// NOVO: Remover Item
 export const removerItem = (itemId: number) => api.delete(`/reservas/item/${itemId}`).then(res => res.data);
 
 export const confirmarReserva = (reservaId: number) => api.post<Reserva>(`/reservas/${reservaId}/confirmar`).then(res => res.data);

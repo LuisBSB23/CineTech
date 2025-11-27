@@ -33,6 +33,7 @@ export default function Profile() {
   const [editSenha, setEditSenha] = useState("");
   const [loadingSave, setLoadingSave] = useState(false);
 
+  // MODIFICAÇÃO: Aba inicial padrão muda se for admin
   const [activeTab, setActiveTab] = useState<'ingressos' | 'pagamento' | 'configuracoes'>('ingressos');
   
   const [historico, setHistorico] = useState<Reserva[]>([]);
@@ -47,8 +48,9 @@ export default function Profile() {
   const [deletePasswordConfirm, setDeletePasswordConfirm] = useState("");
   const [loadingDelete, setLoadingDelete] = useState(false);
 
-  // NOVO: Estado para modal de cancelamento
   const [purchaseToCancel, setPurchaseToCancel] = useState<number | null>(null);
+
+  const isAdmin = user?.perfil === 'ADMIN';
 
   useEffect(() => {
     if (!user) {
@@ -56,11 +58,17 @@ export default function Profile() {
         return;
     }
     setEditNome(user.nome);
-    loadHistory();
-  }, [user, navigate]);
+    
+    // MODIFICAÇÃO: Se for admin, força aba de configurações e evita carregar histórico/cartões
+    if (isAdmin) {
+        setActiveTab('configuracoes');
+    } else {
+        loadHistory();
+    }
+  }, [user, navigate, isAdmin]);
 
   const loadHistory = () => {
-    if (!user) return;
+    if (!user || isAdmin) return;
     setLoadingHist(true);
     getHistorico(user.id)
       .then(data => setHistorico(data))
@@ -69,7 +77,7 @@ export default function Profile() {
   };
 
   const refreshCartoes = () => {
-    if (user) {
+    if (user && !isAdmin) {
         getCartoes(user.id)
           .then(setCartoes)
           .catch(err => console.error("Erro ao carregar cartões", err));
@@ -77,10 +85,10 @@ export default function Profile() {
   };
 
   useEffect(() => {
-    if (activeTab === 'pagamento') {
+    if (activeTab === 'pagamento' && !isAdmin) {
         refreshCartoes();
     }
-  }, [user, activeTab]);
+  }, [user, activeTab, isAdmin]);
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -212,27 +220,32 @@ export default function Profile() {
         
         {/* --- MENU LATERAL --- */}
         <div className="space-y-2">
-          <button 
-            onClick={() => setActiveTab('ingressos')}
-            className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                activeTab === 'ingressos' 
-                ? 'bg-slate-800 text-cyan-400 border border-slate-700 font-medium shadow-sm' 
-                : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-            }`}
-          >
-            <Ticket size={18} /> Meus Ingressos
-          </button>
-          
-          <button 
-            onClick={() => setActiveTab('pagamento')}
-            className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                activeTab === 'pagamento' 
-                ? 'bg-slate-800 text-cyan-400 border border-slate-700 font-medium shadow-sm' 
-                : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-            }`}
-          >
-            <CardIcon size={18} /> Pagamentos
-          </button>
+          {/* MODIFICAÇÃO: Ocultar abas para Admin */}
+          {!isAdmin && (
+            <>
+                <button 
+                    onClick={() => setActiveTab('ingressos')}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                        activeTab === 'ingressos' 
+                        ? 'bg-slate-800 text-cyan-400 border border-slate-700 font-medium shadow-sm' 
+                        : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+                    }`}
+                >
+                    <Ticket size={18} /> Meus Ingressos
+                </button>
+                
+                <button 
+                    onClick={() => setActiveTab('pagamento')}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                        activeTab === 'pagamento' 
+                        ? 'bg-slate-800 text-cyan-400 border border-slate-700 font-medium shadow-sm' 
+                        : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+                    }`}
+                >
+                    <CardIcon size={18} /> Pagamentos
+                </button>
+            </>
+          )}
           
           <button 
             onClick={() => setActiveTab('configuracoes')}
@@ -249,8 +262,8 @@ export default function Profile() {
         {/* --- CONTEÚDO PRINCIPAL --- */}
         <div className="md:col-span-2 space-y-6">
           
-          {/* ABA: MEUS INGRESSOS */}
-          {activeTab === 'ingressos' && (
+          {/* ABA: MEUS INGRESSOS (Só se não for Admin) */}
+          {activeTab === 'ingressos' && !isAdmin && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
                 <h2 className="text-xl font-bold text-white border-b border-slate-800 pb-4 mb-6">Histórico de Compras</h2>
               
@@ -265,7 +278,6 @@ export default function Profile() {
                     <div className="space-y-6">
                     {historico.map((reserva, idx) => (
                         <div key={reserva.id} className="relative">
-                            {/* Agrupamento visual por Reserva se houver múltiplos itens */}
                             {reserva.itens.map((item, itemIdx) => (
                                 <motion.div
                                     key={`${reserva.id}-${item.id}`}
@@ -283,7 +295,6 @@ export default function Profile() {
                                     />
                                 </motion.div>
                             ))}
-                            {/* Botão de Cancelamento para a Reserva */}
                             <div className="flex justify-end mt-2 border-b border-slate-800 pb-6 mb-4">
                                 <Button 
                                     onClick={() => handleCancelPurchaseClick(reserva.id)}
@@ -300,8 +311,8 @@ export default function Profile() {
             </div>
           )}
 
-          {/* ABA: PAGAMENTOS */}
-          {activeTab === 'pagamento' && (
+          {/* ABA: PAGAMENTOS (Só se não for Admin) */}
+          {activeTab === 'pagamento' && !isAdmin && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
                {!showAddCard ? (
                  <>
@@ -393,7 +404,7 @@ export default function Profile() {
                         <ShieldAlert size={20} /> Zona de Perigo
                     </h3>
                     <p className="text-slate-400 text-sm mb-6">
-                        Ao excluir sua conta, todos os seus dados, incluindo histórico de compras e cartões salvos, serão permanentemente removidos. Esta ação não pode ser desfeita.
+                        Ao excluir sua conta, todos os seus dados serão permanentemente removidos. Esta ação não pode ser desfeita.
                     </p>
                     <Button 
                         onClick={() => setShowDeleteAccountModal(true)} 
@@ -409,7 +420,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* MODAL DE EXCLUSÃO DE CARTÃO */}
+      {/* MODAIS (Sem alterações de lógica, apenas para manter o arquivo completo) */}
       <AnimatePresence>
         {cardToDelete && (
             <motion.div 
@@ -443,7 +454,6 @@ export default function Profile() {
         )}
       </AnimatePresence>
 
-      {/* MODAL DE EXCLUSÃO DE CONTA */}
       <AnimatePresence>
         {showDeleteAccountModal && (
             <motion.div 
@@ -494,7 +504,6 @@ export default function Profile() {
         )}
       </AnimatePresence>
 
-      {/* NOVO: MODAL DE CANCELAMENTO DE COMPRA */}
       <AnimatePresence>
         {purchaseToCancel && (
             <motion.div 
