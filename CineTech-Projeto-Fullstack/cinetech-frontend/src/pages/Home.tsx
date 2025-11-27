@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Film, Clock, Tag } from "lucide-react";
-import { motion } from "framer-motion";
+import { Film, Clock, Tag, ChevronLeft, ChevronRight,} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { getFilmes } from "../api";
 import type { Filme } from "../types";
 import { Card, Button, MovieCardSkeleton } from "../components/UiComponents";
@@ -13,6 +13,10 @@ export default function Home() {
   const [filmes, setFilmes] = useState<Filme[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("Todos");
+  
+  // Estado para o Carrossel
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
+
   const [searchParams] = useSearchParams();
   const searchTerm = searchParams.get("q")?.toLowerCase() || "";
   
@@ -26,6 +30,26 @@ export default function Home() {
     }, 800);
     return () => clearTimeout(timer);
   }, []);
+
+  // Lógica do Carrossel (5 primeiros filmes)
+  const heroMovies = useMemo(() => filmes.slice(0, 5), [filmes]);
+
+  // Rotação automática do carrossel
+  useEffect(() => {
+    if (heroMovies.length === 0) return;
+    const interval = setInterval(() => {
+      setCurrentHeroIndex((prev) => (prev + 1) % heroMovies.length);
+    }, 6000); // Muda a cada 6 segundos
+    return () => clearInterval(interval);
+  }, [heroMovies.length]);
+
+  const nextSlide = () => {
+    setCurrentHeroIndex((prev) => (prev + 1) % heroMovies.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentHeroIndex((prev) => (prev - 1 + heroMovies.length) % heroMovies.length);
+  };
 
   // Proteção de Rotas
   const handleProtectedAction = (e: React.MouseEvent, path: string) => {
@@ -46,48 +70,111 @@ export default function Home() {
     });
   }, [filmes, searchTerm, activeFilter]);
 
-  const featuredMovie = filmes[1];
-
   return (
     <div className="animate-fade-in pb-20">
       
-      {/* Hero Section */}
-      {!loading && featuredMovie && !searchTerm && (
-        <div className="relative w-full h-[500px] md:h-[600px] mb-12 overflow-hidden rounded-3xl shadow-2xl shadow-black mx-auto max-w-7xl">
-          <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent z-10" />
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/40 to-transparent z-10" />
-            <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-              <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1533613220915-609f661a6fe1?q=80&w=2560&auto=format&fit=crop')] bg-cover bg-center opacity-50" />
-            </div>
-          </div>
-
-          <div className="absolute bottom-0 left-0 z-20 p-8 md:p-16 max-w-3xl">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+      {/* Carrossel Hero Section */}
+      {!loading && heroMovies.length > 0 && !searchTerm && (
+        <div className="relative w-full h-[500px] md:h-[600px] mb-12 overflow-hidden rounded-3xl shadow-2xl shadow-black mx-auto max-w-7xl group">
+          
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={heroMovies[currentHeroIndex].id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.8 }}
+              className="absolute inset-0"
             >
-              <span className="inline-block px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-400 text-xs font-bold tracking-wider border border-cyan-500/30 mb-4">
-                EM DESTAQUE
-              </span>
-              <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 leading-tight">
-                {featuredMovie.titulo}
-              </h1>
-              <p className="text-slate-300 text-lg md:text-xl mb-8 line-clamp-2 max-w-2xl">
-                {featuredMovie.sinopse}
-              </p>
-              <div className="flex gap-4">
-                <Button onClick={(e) => handleProtectedAction(e, `/filme/${featuredMovie.id}`)} className="h-12 px-8 text-lg" variant="primary">
-                  <Tag size={20} /> Reservar Agora
-                </Button>
-              </div>
+                {/* Imagem de Fundo */}
+                <div className="absolute inset-0">
+                    {heroMovies[currentHeroIndex].imagemUrl ? (
+                        <img 
+                            src={heroMovies[currentHeroIndex].imagemUrl} 
+                            alt={heroMovies[currentHeroIndex].titulo}
+                            className="w-full h-full object-cover object-center opacity-60"
+                        />
+                    ) : (
+                        <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                            <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1533613220915-609f661a6fe1?q=80&w=2560&auto=format&fit=crop')] bg-cover bg-center opacity-50" />
+                        </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent z-10" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/40 to-transparent z-10" />
+                </div>
+
+                {/* Conteúdo do Filme */}
+                <div className="absolute bottom-0 left-0 z-20 p-8 md:p-16 max-w-3xl">
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                    >
+                        <span className="inline-block px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-400 text-xs font-bold tracking-wider border border-cyan-500/30 mb-4 backdrop-blur-md">
+                            EM DESTAQUE
+                        </span>
+                        <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 leading-tight drop-shadow-lg">
+                            {heroMovies[currentHeroIndex].titulo}
+                        </h1>
+                        
+                        <div className="flex items-center gap-4 text-slate-300 mb-6 text-sm font-medium">
+                            <span className="flex items-center gap-1">
+                                <Clock size={16} className="text-cyan-500"/> 
+                                {heroMovies[currentHeroIndex].duracaoMinutos} min
+                            </span>
+                            <span className="w-1 h-1 bg-slate-500 rounded-full"></span>
+                            <span>{heroMovies[currentHeroIndex].generos?.split(',')[0] || 'Cinema'}</span>
+                        </div>
+
+                        <p className="text-slate-200 text-lg md:text-xl mb-8 line-clamp-2 max-w-2xl drop-shadow-md">
+                            {heroMovies[currentHeroIndex].sinopse}
+                        </p>
+                        
+                        <div className="flex gap-4">
+                            <Button 
+                                onClick={(e) => handleProtectedAction(e, `/filme/${heroMovies[currentHeroIndex].id}`)} 
+                                className="h-12 px-8 text-lg shadow-cyan-500/20" 
+                                variant="primary"
+                            >
+                                <Tag size={20} /> Reservar Agora
+                            </Button>
+                        </div>
+                    </motion.div>
+                </div>
             </motion.div>
+          </AnimatePresence>
+
+          {/* Controles de Navegação */}
+          <button 
+            onClick={prevSlide}
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-black/20 hover:bg-black/50 text-white/70 hover:text-white border border-white/10 backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
+          >
+            <ChevronLeft size={32} />
+          </button>
+          
+          <button 
+            onClick={nextSlide}
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-black/20 hover:bg-black/50 text-white/70 hover:text-white border border-white/10 backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
+          >
+            <ChevronRight size={32} />
+          </button>
+
+          {/* Indicadores (Bolinhas) */}
+          <div className="absolute bottom-6 right-8 z-30 flex gap-2">
+            {heroMovies.map((_, idx) => (
+                <button
+                    key={idx}
+                    onClick={() => setCurrentHeroIndex(idx)}
+                    className={`h-2 rounded-full transition-all duration-300 shadow-sm ${
+                        currentHeroIndex === idx ? "w-8 bg-cyan-500" : "w-2 bg-white/40 hover:bg-white/70"
+                    }`}
+                />
+            ))}
           </div>
         </div>
       )}
 
-      {/* Container Principal */}
+      {/* Container Principal (Grid de Filmes) */}
       <div className="container mx-auto px-4 max-w-7xl">
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-6">
           <h2 className="text-2xl font-bold text-white flex items-center gap-2">
